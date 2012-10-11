@@ -1,0 +1,12 @@
+subberthehut is a command-line based OpenSubtitles.org downloader, written in C.
+
+It is inspired by subdl [1], which is not developed anymore.
+The foremost reason I wrote this is because subdl only supports hash-based search.
+subberthehut can also do a fulltext search in case the hash-based searched returns no results.
+
+Dependencies:
+ - xmlrpc-c
+ - glib2
+ - zlib
+
+ [1] http://code.google.com/p/subdl/
