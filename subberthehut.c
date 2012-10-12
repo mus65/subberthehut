@@ -18,7 +18,7 @@
 
 #define ZLIB_CHUNK          64*1024
 
-xmlrpc_env env;
+static xmlrpc_env env;
 
 // options default values
 static const char *lang = "eng";
