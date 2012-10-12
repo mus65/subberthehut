@@ -1,13 +1,20 @@
 VERSION   = $(shell git describe)
+
 DISTFILES = Makefile subberthehut.c
 
 CC      = gcc -std=gnu99
-CFLAGS := -Wall -Wextra -pedantic -O2 $(shell xmlrpc-c-config client --cflags) $(shell pkg-config --cflags glib-2.0 zlib) $(CFLAGS)
-LDLIBS  = $(shell xmlrpc-c-config client --libs) $(shell pkg-config --libs glib-2.0 zlib)
+
+CFLAGS := -Wall -Wextra -pedantic -O2 \
+          $(shell xmlrpc-c-config client --cflags) \
+          $(shell pkg-config --cflags glib-2.0 zlib) \
+          $(CFLAGS)
+
+LDLIBS  = $(shell xmlrpc-c-config client --libs) \
+          $(shell pkg-config --libs glib-2.0 zlib)
 
 subberthehut: subberthehut.o
 
-install:
+install: subberthehut
 	install -D -m 755 subberthehut $(DESTDIR)/usr/bin/subberthehut
 
 uninstall:
