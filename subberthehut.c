@@ -3,6 +3,7 @@
 #include <getopt.h>
 #include <string.h>
 #include <errno.h>
+#include <stdbool.h>
 
 #include <xmlrpc-c/base.h>
 #include <xmlrpc-c/client.h>
@@ -22,11 +23,11 @@ static xmlrpc_env env;
 
 // options default values
 static const char *lang = "eng";
-static int force_overwrite = 0;
-static int always_ask = 0;
-static int never_ask = 0;
-static int hash_search_only = 0;
-static int same_name = 0;
+static bool force_overwrite = false;
+static bool always_ask = false;
+static bool never_ask = false;
+static bool hash_search_only = false;
+static bool same_name = false;
 
 /*
  * creates the 64-bit hash used for the search query.
@@ -473,23 +474,23 @@ int main(int argc, char *argv[])
 			break;
 
 		case 'a':
-			always_ask = 1;
+			always_ask = true;
 			break;
 
 		case 'n':
-			never_ask = 1;
+			never_ask = true;
 			break;
 
 		case 'f':
-			force_overwrite = 1;
+			force_overwrite = true;
 			break;
 
 		case 'o':
-			hash_search_only = 1;
+			hash_search_only = true;
 			break;
 
 		case 's':
-			same_name = 1;
+			same_name = true;
 			break;
 
 		default:
