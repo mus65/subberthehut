@@ -89,7 +89,8 @@ static const char *struct_get_string(xmlrpc_value * s, const char *key)
 	return str;
 }
 
-static xmlrpc_value *search_get_results(const char *token, unsigned long long hash, int filesize, const char *lang, const char *filename)
+static xmlrpc_value *search_get_results(const char *token, unsigned long long hash,
+                                        int filesize, const char *lang, const char *filename)
 {
 	xmlrpc_value *query1;	// hash-based query
 	xmlrpc_value *sublanguageid_xmlval;
@@ -291,6 +292,7 @@ static int sub_download(const char *token, int sub_id, const char *file_path)
 		r = errno;
 		goto err_file;
 	}
+
 	// 16+MAX_WBITS is needed for gzip support
 	z_ret = inflateInit2(&z_strm, 16 + MAX_WBITS);
 	if (z_ret != Z_OK) {
@@ -366,22 +368,24 @@ static void usage()
 	       "do a fulltext-based search, meaning the OpenSubtitle.org database\n"
 	       "will be searched with the filename of the specified file. The results\n"
 	       "from this search are not guaranteed to be compatible with the video\n"
-	       "file, therefore %s will, by default, ask the user which subtitle to\n" "download.\n\n", NAME, NAME, NAME, NAME, NAME);
+	       "file, therefore %s will, by default, ask the user which subtitle to\n"
+	       "download.\n\n",
+	       NAME, NAME, NAME, NAME, NAME);
 
 	puts("Options:\n"
-	       " -h, --help              Display help and exit.\n"
-	       " -l, --lang <languages>  Comma-separated list of languages to search for,\n"
-	       "                         e.g. 'eng,ger'. Default is 'eng'.\n"
-	       " -a, --always-ask        Always ask which subtitle to download, even\n"
-	       "                         when there are hash-based results.\n"
-	       " -n, --never-ask         Never ask which subtitle to download, even\n"
-	       "                         when there are only filename based results.\n"
-	       "                         When this option is specified, the first\n"
-	       "                         search result will be downloaded.\n"
-	       " -f, --force             Overwrite output file if it already exists.\n"
-	       " -o, --hash-search-only  Only do a hash-based search.\n"
-	       " -s, --same-name         Download the subtitle to the same filename as the\n"
-	       "                         original file, only replacing the file extension.\n");
+	     " -h, --help              Display help and exit.\n"
+	     " -l, --lang <languages>  Comma-separated list of languages to search for,\n"
+	     "                         e.g. 'eng,ger'. Default is 'eng'.\n"
+	     " -a, --always-ask        Always ask which subtitle to download, even\n"
+	     "                         when there are hash-based results.\n"
+	     " -n, --never-ask         Never ask which subtitle to download, even\n"
+	     "                         when there are only filename based results.\n"
+	     "                         When this option is specified, the first\n"
+	     "                         search result will be downloaded.\n"
+	     " -f, --force             Overwrite output file if it already exists.\n"
+	     " -o, --hash-search-only  Only do a hash-based search.\n"
+	     " -s, --same-name         Download the subtitle to the same filename as the\n"
+	     "                         original file, only replacing the file extension.\n");
 }
 
 static const char *get_sub_path(const char *filepath, const char *sub_filename)
@@ -391,7 +395,8 @@ static const char *get_sub_path(const char *filepath, const char *sub_filename)
 	if (same_name) {
 		const char *sub_ext = strrchr(sub_filename, '.');
 		if (sub_ext == NULL) {
-			fprintf(stderr, "warning: subtitle filename from the OpenSubtitles.org database has no file extension, assuming .srt.\n");
+			fprintf(stderr, "warning: subtitle filename from the OpenSubtitles.org "
+					"database has no file extension, assuming .srt.\n");
 			sub_ext = ".srt";
 		}
 		const char *lastdot = strrchr(filepath, '.');
@@ -514,9 +519,9 @@ int main(int argc, char *argv[])
 	}
 	// login
 	r = login(&token);
-	if (r != 0) {
+	if (r != 0)
 		goto err_login;
-	}
+
 	// start search
 	printf("searching...\n");
 
