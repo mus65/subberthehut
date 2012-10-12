@@ -89,8 +89,8 @@ static const char *struct_get_string(xmlrpc_value * s, const char *key)
 	return str;
 }
 
-static xmlrpc_value *search_get_results(const char *token, unsigned long long hash,
-                                        int filesize, const char *lang, const char *filename)
+static int search_get_results(const char *token, unsigned long long hash, int filesize,
+                              const char *lang, const char *filename, xmlrpc_value **data)
 {
 	xmlrpc_value *query1;	// hash-based query
 	xmlrpc_value *sublanguageid_xmlval;
@@ -104,7 +104,8 @@ static xmlrpc_value *search_get_results(const char *token, unsigned long long ha
 
 	xmlrpc_value *query_array;
 	xmlrpc_value *result;
-	xmlrpc_value *r = NULL;
+
+	int r = 0;
 
 	query_array = xmlrpc_array_new(&env);
 
@@ -137,12 +138,19 @@ static xmlrpc_value *search_get_results(const char *token, unsigned long long ha
 	result = xmlrpc_client_call(&env, XMLRPC_URL, "SearchSubtitles", "(sA)", token, query_array);
 	if (env.fault_occurred) {
 		fprintf(stderr, "query failed: %s (%d)\n", env.fault_string, env.fault_code);
+		r = env.fault_code;
 		goto err_result;
 	}
 
-	xmlrpc_struct_find_value(&env, result, "data", &r);
+	xmlrpc_struct_read_value(&env, result, "data", data);
+	if (env.fault_occurred) {
+		fprintf(stderr, "failed to get data: %s (%d)\n", env.fault_string, env.fault_code);
+		r = env.fault_code;
+		goto err_data;
+	}
 
 	// cleanup
+      err_data:
 	xmlrpc_DECREF(result);
 
       err_result:
@@ -529,9 +537,8 @@ int main(int argc, char *argv[])
 	if (filename == NULL)
 		filename = filepath;
 
-	results = search_get_results(token, hash, filesize, lang, filename);
-	if (results == NULL) {
-		r = EXIT_FAILURE;
+	r = search_get_results(token, hash, filesize, lang, filename, &results);
+	if (r != 0) {
 		goto err_results;
 	}
 	// for some reason [data] is of type XMLRPC_TYPE_BOOL if the search returns no hits!?
