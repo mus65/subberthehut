@@ -21,12 +21,12 @@
 xmlrpc_env env;
 
 // options default values
-const char *lang = "eng";
-int force_overwrite = 0;
-int always_ask = 0;
-int never_ask = 0;
-int hash_search_only = 0;
-int same_name = 0;
+static const char *lang = "eng";
+static int force_overwrite = 0;
+static int always_ask = 0;
+static int never_ask = 0;
+static int hash_search_only = 0;
+static int same_name = 0;
 
 /*
  * creates the 64-bit hash used for the search query.
