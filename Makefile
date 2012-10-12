@@ -7,6 +7,12 @@ LDLIBS  = $(shell xmlrpc-c-config client --libs) $(shell pkg-config --libs glib-
 
 subberthehut: subberthehut.o
 
+install:
+	install -D -m 755 subberthehut $(DESTDIR)/usr/bin/subberthehut
+
+uninstall:
+	$(RM) $(DESTDIR)/usr/bin/subberthehut
+
 clean:
 	$(RM) subberthehut subberthehut.o subberthehut-$(VERSION).tar.gz
 

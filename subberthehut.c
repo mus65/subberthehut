@@ -396,7 +396,7 @@ static const char *get_sub_path(const char *filepath, const char *sub_filename)
 		const char *sub_ext = strrchr(sub_filename, '.');
 		if (sub_ext == NULL) {
 			fprintf(stderr, "warning: subtitle filename from the OpenSubtitles.org "
-					"database has no file extension, assuming .srt.\n");
+			                "database has no file extension, assuming .srt.\n");
 			sub_ext = ".srt";
 		}
 		const char *lastdot = strrchr(filepath, '.');
