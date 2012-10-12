@@ -99,8 +99,8 @@ static xmlrpc_value *search_get_results(const char *token, unsigned long long ha
 	char hash_str[16 + 1];
 	char filesize_str[100];
 
-	xmlrpc_value *query2;	// full-text query
-	xmlrpc_value *filename_xmlval;
+	xmlrpc_value *query2 = NULL;	// full-text query
+	xmlrpc_value *filename_xmlval = NULL;
 
 	xmlrpc_value *query_array;
 	xmlrpc_value *result;
@@ -437,7 +437,7 @@ int main(int argc, char *argv[])
 
 	xmlrpc_value *results;
 
-	const char *sub_filename;
+	const char *sub_filename = NULL;
 	const char *sub_filepath;
 
 	int r = EXIT_SUCCESS;
@@ -541,7 +541,7 @@ int main(int argc, char *argv[])
 		goto err_noresults;
 	}
 	// let user choose the subtitle to download
-	int sub_id;
+	int sub_id = 0;
 	r = choose_from_results(results, &sub_id, &sub_filename);
 	if (r != 0)
 		goto err_choose;
