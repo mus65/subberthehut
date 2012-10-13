@@ -17,7 +17,7 @@
 #define LOGIN_LANGCODE      "en"
 #define LOGIN_USER_AGENT    "OS Test User Agent"
 
-#define ZLIB_CHUNK          64*1024
+#define ZLIB_CHUNK          64 * 1024
 
 static xmlrpc_env env;
 
@@ -34,7 +34,7 @@ static bool same_name = false;
  * copied and modified from:
  * http://trac.opensubtitles.org/projects/opensubtitles/wiki/HashSourceCodes
  */
-static unsigned long long compute_hash(FILE * handle)
+static unsigned long long compute_hash(FILE *handle)
 {
 	unsigned long long hash, fsize, tmp, i;
 
@@ -77,7 +77,7 @@ static int login(const char **token)
 /*
  * convenience function the get a string value from a xmlrpc struct.
  */
-static const char *struct_get_string(xmlrpc_value * s, const char *key)
+static const char *struct_get_string(xmlrpc_value *s, const char *key)
 {
 	xmlrpc_value *xmlval;
 	const char *str;
@@ -169,7 +169,7 @@ static int search_get_results(const char *token, unsigned long long hash, int fi
 	return r;
 }
 
-static int choose_from_results(xmlrpc_value * results, int *sub_id, const char **sub_filename)
+static int choose_from_results(xmlrpc_value *results, int *sub_id, const char **sub_filename)
 {
 	struct sub_info {
 		int id;
@@ -200,7 +200,7 @@ static int choose_from_results(xmlrpc_value * results, int *sub_id, const char *
 		sub_infos[i].id = strtol(sub_id_str, NULL, 10);
 		sub_infos[i].filename = sub_filename;
 
-		int matched_by_moviehash = strcmp(matched_by, "moviehash") == 0;
+		bool matched_by_moviehash = strcmp(matched_by, "moviehash") == 0;
 
 		if (matched_by_moviehash && sel == 0)
 			sel = i + 1;
@@ -244,11 +244,11 @@ static int sub_download(const char *token, int sub_id, const char *file_path)
 	xmlrpc_value *query_array;
 	xmlrpc_value *result;
 
-	xmlrpc_value *data;	// result -> data
-	xmlrpc_value *data_0;	// result -> data[0]
-	xmlrpc_value *data_0_sub;	// result -> data[0][data]
+	xmlrpc_value *data;	  // result -> data
+	xmlrpc_value *data_0;	  // result -> data[0]
+	xmlrpc_value *data_0_sub; // result -> data[0][data]
 
-	const char *sub_base64;	//  the subtitle, gzipped and base64 encoded
+	const char *sub_base64;	  // the subtitle, gzipped and base64 encoded
 
 	// zlib stuff, see also http://zlib.net/zlib_how.html
 	int z_ret;
