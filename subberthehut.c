@@ -221,11 +221,15 @@ static int choose_from_results(xmlrpc_value *results, int *sub_id, const char **
 		if (never_ask) {
 			sel = 1;
 		} else {
-			int sf_r;
+			char *line = NULL;
+			size_t len = 0;
+			char *endptr = NULL;
 			do {
 				printf("Choose subtitle [1..%i]: ", n);
-				sf_r = scanf("%i", &sel);
-			} while (sf_r != 1 || sel < 1 || sel > n);
+				getline(&line, &len, stdin);
+				sel = strtol(line, &endptr, 10);
+			} while (*endptr != '\n' || sel < 1 || sel > n);
+			free(line);
 		}
 	}
 
