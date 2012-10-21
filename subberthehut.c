@@ -15,7 +15,7 @@
 
 #define XMLRPC_URL          "http://api.opensubtitles.org/xml-rpc"
 #define LOGIN_LANGCODE      "en"
-#define LOGIN_USER_AGENT    "OS Test User Agent"
+#define LOGIN_USER_AGENT    NAME
 
 #define ZLIB_CHUNK          64 * 1024
 
