@@ -309,6 +309,7 @@ static int sub_download(const char *token, int sub_id, const char *file_path)
 	// 16+MAX_WBITS is needed for gzip support
 	z_ret = inflateInit2(&z_strm, 16 + MAX_WBITS);
 	if (z_ret != Z_OK) {
+		fprintf(stderr, "failed to init zlib (%i)\n", z_ret);
 		r = z_ret;
 		goto err_zlib_init;
 	}
