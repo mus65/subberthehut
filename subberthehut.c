@@ -70,7 +70,7 @@ static int login(const char **token)
 	xmlrpc_DECREF(result);
 	xmlrpc_DECREF(token_xmlval);
 
-      err_result:
+err_result:
 	return r;
 }
 
@@ -151,10 +151,10 @@ static int search_get_results(const char *token, unsigned long long hash, int fi
 	}
 
 	// cleanup
-      err_data:
+err_data:
 	xmlrpc_DECREF(result);
 
-      err_result:
+err_result:
 	xmlrpc_DECREF(query1);
 	xmlrpc_DECREF(sublanguageid_xmlval);
 	xmlrpc_DECREF(hash_xmlval);
@@ -210,10 +210,10 @@ static int choose_from_results(xmlrpc_value *results, int *sub_id, const char **
 		printf("%i. [%c] [%s] %s\t%s\n", i + 1, matched_by_short, lang, release_name, sub_filename);
 
 		xmlrpc_DECREF(oneresult);
-		free((void *) sub_id_str);
-		free((void *) lang);
-		free((void *) release_name);
-		free((void *) matched_by);
+		free((void *)sub_id_str);
+		free((void *)lang);
+		free((void *)release_name);
+		free((void *)matched_by);
 		// sub_filename is free()d later
 	}
 
@@ -237,7 +237,7 @@ static int choose_from_results(xmlrpc_value *results, int *sub_id, const char **
 	*sub_filename = strdup(sub_infos[sel - 1].filename);
 
 	for (int i = 0; i < n; i++)
-		free((void *) sub_infos[i].filename);
+		free((void *)sub_infos[i].filename);
 
 	return 0;
 }
@@ -345,24 +345,24 @@ static int sub_download(const char *token, int sub_id, const char *file_path)
 	} while (z_ret != Z_STREAM_END);
 
 	// cleanup
-      err_inflate:
+err_inflate:
 	inflateEnd(&z_strm);
 
-      err_zlib_init:
+err_zlib_init:
 	fclose(f);
 
-      err_file:
+err_file:
 	xmlrpc_DECREF(result);
 	xmlrpc_DECREF(data);
 	xmlrpc_DECREF(data_0);
 	xmlrpc_DECREF(data_0_sub);
-	free((void *) sub_base64);
+	free((void *)sub_base64);
 
-      err_result:
+err_result:
 	xmlrpc_DECREF(sub_id_xmlval);
 	xmlrpc_DECREF(query_array);
 
-      err_file_exists:
+err_file_exists:
 	return r;
 }
 
@@ -565,22 +565,22 @@ int main(int argc, char *argv[])
 	printf("downloading to %s ...\n", sub_filepath);
 	r = sub_download(token, sub_id, sub_filepath);
 
-	free((void *) sub_filepath);
+	free((void *)sub_filepath);
 	fclose(f);
 
-      err_choose:
-	free((void *) sub_filename);
+err_choose:
+	free((void *)sub_filename);
 
-      err_noresults:
+err_noresults:
 	xmlrpc_DECREF(results);
 
-      err_results:
-	free((void *) token);
+err_results:
+	free((void *)token);
 
-      err_login:
+err_login:
 	xmlrpc_client_cleanup();
 
-      err_xmlrpc_init:
+err_xmlrpc_init:
 	xmlrpc_env_clean(&env);
 	return r;
 }
