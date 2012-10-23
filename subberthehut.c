@@ -271,9 +271,9 @@ static int sub_download(const char *token, int sub_id, const char *file_path)
 	// check if file already exists
 	if (access(file_path, F_OK) == 0) {
 		if (force_overwrite) {
-			printf("file already exists, overwriting.\n");
+			puts("file already exists, overwriting.");
 		} else {
-			fprintf(stderr, "file already exists, aborting. Use -f to force an overwrite.\n");
+			fputs("file already exists, aborting. Use -f to force an overwrite.\n", stderr);
 			r = errno;
 			goto err_file_exists;
 		}
@@ -410,8 +410,8 @@ static const char *get_sub_path(const char *filepath, const char *sub_filename)
 	if (same_name) {
 		const char *sub_ext = strrchr(sub_filename, '.');
 		if (sub_ext == NULL) {
-			fprintf(stderr, "warning: subtitle filename from the OpenSubtitles.org "
-			                "database has no file extension, assuming .srt.\n");
+			fputs("warning: subtitle filename from the OpenSubtitles.org "
+			      "database has no file extension, assuming .srt.\n", stderr);
 			sub_ext = ".srt";
 		}
 		const char *lastdot = strrchr(filepath, '.');
@@ -538,7 +538,7 @@ int main(int argc, char *argv[])
 		goto err_login;
 
 	// start search
-	printf("searching...\n");
+	puts("searching...");
 
 	const char *filename = strrchr(filepath, '/');
 	if (filename == NULL)
@@ -550,7 +550,7 @@ int main(int argc, char *argv[])
 	}
 	// for some reason [data] is of type XMLRPC_TYPE_BOOL if the search returns no hits!?
 	if (xmlrpc_value_type(results) != XMLRPC_TYPE_ARRAY) {
-		printf("no results.\n");
+		puts("no results.");
 		r = EXIT_FAILURE;
 		goto err_noresults;
 	}
