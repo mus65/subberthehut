@@ -4,6 +4,7 @@
 #include <string.h>
 #include <errno.h>
 #include <stdbool.h>
+#include <math.h>
 
 #include <xmlrpc-c/base.h>
 #include <xmlrpc-c/client.h>
@@ -18,6 +19,12 @@
 #define LOGIN_USER_AGENT    NAME
 
 #define ZLIB_CHUNK          64 * 1024
+
+#define HEADER_ID           '#'
+#define HEADER_MATCHED_BY   '*'
+#define HEADER_LANG         "Lng"
+#define HEADER_RELEASE_NAME "Release Name"
+#define HEADER_FILENAME     "Filename"
 
 static xmlrpc_env env;
 
@@ -173,6 +180,9 @@ static int choose_from_results(xmlrpc_value *results, int *sub_id, const char **
 {
 	struct sub_info {
 		int id;
+		char matched_by_short;
+		const char *lang;
+		const char *release_name;
 		const char *filename;
 	};
 
@@ -184,38 +194,86 @@ static int choose_from_results(xmlrpc_value *results, int *sub_id, const char **
 
 	struct sub_info sub_infos[n];
 
-	int sel = 0;
+	int sel = 0; // selected list item
+
+	/*
+	 * In order to properly align the table later, we
+	 * need the length of the longest release_name and 
+	 * filename and the number of digits of n.
+	 * Everything else is of fixed length.
+	 *
+	 * For the rare case that the longest release_name
+	 * or filename is smaller than the corresponding
+	 * header string, set them to the length of the
+	 * header strings initially, otherwise the output
+	 * gets screwed up.
+	 */
+	int align_release_name = strlen(HEADER_RELEASE_NAME);
+	int align_filename = strlen(HEADER_FILENAME);
+	int digit_count = log10(n) + 1;
+
 	for (int i = 0; i < n; i++) {
 		xmlrpc_value *oneresult;
 		xmlrpc_array_read_item(&env, results, i, &oneresult);
 
 		// dear OpenSubtitles.org, why are these IDs provided as strings?
 		const char *sub_id_str = struct_get_string(oneresult, "IDSubtitleFile");
-		const char *lang = struct_get_string(oneresult, "SubLanguageID");
-		const char *release_name = struct_get_string(oneresult, "MovieReleaseName");
-		const char *sub_filename = struct_get_string(oneresult, "SubFileName");
-		const char *matched_by = struct_get_string(oneresult, "MatchedBy");
+		const char *matched_by_str = struct_get_string(oneresult, "MatchedBy");
 
-		// TODO : check strtol
+		bool matched_by_moviehash = strcmp(matched_by_str, "moviehash") == 0;
+
 		sub_infos[i].id = strtol(sub_id_str, NULL, 10);
-		sub_infos[i].filename = sub_filename;
-
-		bool matched_by_moviehash = strcmp(matched_by, "moviehash") == 0;
+		sub_infos[i].matched_by_short = matched_by_moviehash ? 'H' : 'F';
+		sub_infos[i].lang = struct_get_string(oneresult, "SubLanguageID");
+		sub_infos[i].release_name = struct_get_string(oneresult, "MovieReleaseName");
+		sub_infos[i].filename = struct_get_string(oneresult, "SubFileName");
 
 		if (matched_by_moviehash && sel == 0)
 			sel = i + 1;
 
-		char matched_by_short = matched_by_moviehash ? 'H' : 'F';
+		int s = strlen(sub_infos[i].release_name);
+		if (s > align_release_name)
+			align_release_name = s;
 
-		printf("%i. [%c] [%s] %s\t%s\n", i + 1, matched_by_short, lang, release_name, sub_filename);
+		s = strlen(sub_infos[i].filename);
+		if (s > align_filename)
+			align_filename = s;
 
 		xmlrpc_DECREF(oneresult);
 		free((void *)sub_id_str);
-		free((void *)lang);
-		free((void *)release_name);
-		free((void *)matched_by);
-		// sub_filename is free()d later
+		free((void *)matched_by_str);
 	}
+
+	// print header
+	puts("");
+	int c = printf("%-*c | %c | %s | %-*s | %-*s\n",
+	               digit_count,
+	               HEADER_ID,
+	               HEADER_MATCHED_BY,
+	               HEADER_LANG,
+	               align_release_name,
+	               HEADER_RELEASE_NAME,
+	               align_filename,
+	               HEADER_FILENAME);
+
+	// print separator
+	for (int i = 0; i < c; i++)
+		putchar('-');	
+	
+	puts("");
+
+	// print list
+	for (int i = 0; i < n; i++) {
+		printf("%-*i | %c | %s | %-*s | %s\n",
+		       digit_count,
+		       i + 1,
+		       sub_infos[i].matched_by_short,
+		       sub_infos[i].lang,
+		       align_release_name,
+		       sub_infos[i].release_name,
+		       sub_infos[i].filename);
+	}
+	puts("");
 
 	if (sel == 0 || always_ask) {
 		if (never_ask) {
@@ -236,8 +294,11 @@ static int choose_from_results(xmlrpc_value *results, int *sub_id, const char **
 	*sub_id = sub_infos[sel - 1].id;
 	*sub_filename = strdup(sub_infos[sel - 1].filename);
 
-	for (int i = 0; i < n; i++)
+	for (int i = 0; i < n; i++) {
+		free((void *)sub_infos[i].lang);
+		free((void *)sub_infos[i].release_name);
 		free((void *)sub_infos[i].filename);
+	}
 
 	return 0;
 }
