@@ -12,7 +12,7 @@
 #include <zlib.h>
 
 #define NAME                "subberthehut"
-#define VERSION             "0.2"
+#define VERSION             "0.3"
 
 #define XMLRPC_URL          "http://api.opensubtitles.org/xml-rpc"
 #define LOGIN_LANGCODE      "en"
@@ -20,11 +20,11 @@
 
 #define ZLIB_CHUNK          64 * 1024
 
-#define HEADER_ID           '#'
-#define HEADER_MATCHED_BY   '*'
-#define HEADER_LANG         "Lng"
-#define HEADER_RELEASE_NAME "Release Name"
-#define HEADER_FILENAME     "Filename"
+#define HEADER_ID               '#'
+#define HEADER_MATCHED_BY_HASH  'H'
+#define HEADER_LANG             "Lng"
+#define HEADER_RELEASE_NAME     "Release Name"
+#define HEADER_FILENAME         "Filename"
 
 static xmlrpc_env env;
 
@@ -180,7 +180,7 @@ static int choose_from_results(xmlrpc_value *results, int *sub_id, const char **
 {
 	struct sub_info {
 		int id;
-		char matched_by_short;
+		bool matched_by_hash;
 		const char *lang;
 		const char *release_name;
 		const char *filename;
@@ -220,15 +220,14 @@ static int choose_from_results(xmlrpc_value *results, int *sub_id, const char **
 		const char *sub_id_str = struct_get_string(oneresult, "IDSubtitleFile");
 		const char *matched_by_str = struct_get_string(oneresult, "MatchedBy");
 
-		bool matched_by_moviehash = strcmp(matched_by_str, "moviehash") == 0;
 
 		sub_infos[i].id = strtol(sub_id_str, NULL, 10);
-		sub_infos[i].matched_by_short = matched_by_moviehash ? 'H' : 'F';
+		sub_infos[i].matched_by_hash = strcmp(matched_by_str, "moviehash") == 0;
 		sub_infos[i].lang = struct_get_string(oneresult, "SubLanguageID");
 		sub_infos[i].release_name = struct_get_string(oneresult, "MovieReleaseName");
 		sub_infos[i].filename = struct_get_string(oneresult, "SubFileName");
 
-		if (matched_by_moviehash && sel == 0)
+		if (sub_infos[i].matched_by_hash && sel == 0)
 			sel = i + 1;
 
 		int s = strlen(sub_infos[i].release_name);
@@ -249,7 +248,7 @@ static int choose_from_results(xmlrpc_value *results, int *sub_id, const char **
 	int c = printf("%-*c | %c | %s | %-*s | %-*s\n",
 	               digit_count,
 	               HEADER_ID,
-	               HEADER_MATCHED_BY,
+	               HEADER_MATCHED_BY_HASH,
 	               HEADER_LANG,
 	               align_release_name,
 	               HEADER_RELEASE_NAME,
@@ -267,7 +266,7 @@ static int choose_from_results(xmlrpc_value *results, int *sub_id, const char **
 		printf("%-*i | %c | %s | %-*s | %s\n",
 		       digit_count,
 		       i + 1,
-		       sub_infos[i].matched_by_short,
+		       sub_infos[i].matched_by_hash ? '*' : ' ',
 		       sub_infos[i].lang,
 		       align_release_name,
 		       sub_infos[i].release_name,
@@ -440,11 +439,13 @@ static void usage()
 	       "with the video file, therefore %s will, by default, automatically\n"
 	       "download the first subtitle from these search results.\n"
 	       "In case the hash-based search returns no results, %s will also\n"
-	       "do a fulltext-based search, meaning the OpenSubtitle.org database\n"
+	       "do a fulltext-based search, meaning the OpenSubtitles.org database\n"
 	       "will be searched with the filename of the specified file. The results\n"
 	       "from this search are not guaranteed to be compatible with the video\n"
 	       "file, therefore %s will, by default, ask the user which subtitle to\n"
-	       "download.\n\n",
+	       "download.\n"
+	       "Results from the hash-based search are marked with an asterisk (*)\n"
+	       "in the 'H' column.\n\n",
 	       NAME, NAME, NAME, NAME, NAME);
 
 	puts("Options:\n"
@@ -486,7 +487,6 @@ static const char *get_sub_path(const char *filepath, const char *sub_filename)
 		strncpy(sub_filepath, filepath, index);
 		sub_filepath[index] = '\0';
 		strcat(sub_filepath, sub_ext);
-
 	} else {
 		const char *lastslash = strrchr(filepath, '/');
 		if (lastslash == NULL) {
