@@ -245,7 +245,7 @@ static int choose_from_results(xmlrpc_value *results, int *sub_id, const char **
 	}
 
 	// print header
-	puts("");
+	putchar('\n');
 	int c = printf("%-*c | %c | %s | %-*s | %-*s\n",
 	               digit_count,
 	               HEADER_ID,
@@ -260,7 +260,7 @@ static int choose_from_results(xmlrpc_value *results, int *sub_id, const char **
 	for (int i = 0; i < c; i++)
 		putchar('-');	
 	
-	puts("");
+	putchar('\n');
 
 	// print list
 	for (int i = 0; i < n; i++) {
@@ -273,7 +273,7 @@ static int choose_from_results(xmlrpc_value *results, int *sub_id, const char **
 		       sub_infos[i].release_name,
 		       sub_infos[i].filename);
 	}
-	puts("");
+	putchar('\n');
 
 	if (sel == 0 || always_ask) {
 		if (never_ask) {
