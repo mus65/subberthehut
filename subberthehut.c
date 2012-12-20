@@ -11,20 +11,43 @@
 #include <glib.h>
 #include <zlib.h>
 
-#define NAME                "subberthehut"
-#define VERSION             "0.3"
+#define NAME                   "subberthehut"
+#define VERSION                "0.3"
 
-#define XMLRPC_URL          "http://api.opensubtitles.org/xml-rpc"
-#define LOGIN_LANGCODE      "en"
-#define LOGIN_USER_AGENT    NAME
+#define XMLRPC_URL             "http://api.opensubtitles.org/xml-rpc"
+#define LOGIN_LANGCODE         "en"
+#define LOGIN_USER_AGENT       NAME
 
-#define ZLIB_CHUNK          64 * 1024
+#define ZLIB_CHUNK             (64 * 1024)
 
-#define HEADER_ID               '#'
-#define HEADER_MATCHED_BY_HASH  'H'
-#define HEADER_LANG             "Lng"
-#define HEADER_RELEASE_NAME     "Release Name"
-#define HEADER_FILENAME         "Filename"
+#define HEADER_ID              '#'
+#define HEADER_MATCHED_BY_HASH 'H'
+#define HEADER_LANG            "Lng"
+#define HEADER_RELEASE_NAME    "Release Name"
+#define HEADER_FILENAME        "Filename"
+
+/* __attribute__(cleanup)__ */
+#define CLEANUP_FREE           __attribute__((cleanup(cleanup_free)))
+#define CLEANUP_FCLOSE         __attribute__((cleanup(cleanup_fclose)))
+#define CLEANUP_XMLRPC_DECREF  __attribute__((cleanup(cleanup_xmlrpc_DECREF)))
+
+static void cleanup_free(void *p)
+{
+	free(*(void**)p);
+}
+
+static void cleanup_fclose(FILE **p)
+{
+	if(*p)
+		fclose(*p);
+}
+
+static void cleanup_xmlrpc_DECREF(xmlrpc_value **p)
+{
+	if(*p)
+		xmlrpc_DECREF(*p);
+}
+/* end __attribute__(cleanup)__ */
 
 static xmlrpc_env env;
 
@@ -60,25 +83,19 @@ static unsigned long long compute_hash(FILE *handle)
 
 static int login(const char **token)
 {
-	xmlrpc_value *result;
-	xmlrpc_value *token_xmlval;
-	int r = 0;
+	CLEANUP_XMLRPC_DECREF xmlrpc_value *result = NULL;
+	CLEANUP_XMLRPC_DECREF xmlrpc_value *token_xmlval = NULL;
 
 	result = xmlrpc_client_call(&env, XMLRPC_URL, "LogIn", "(ssss)", "", "", LOGIN_LANGCODE, LOGIN_USER_AGENT);
 	if (env.fault_occurred) {
 		fprintf(stderr, "login failed: %s (%d)\n", env.fault_string, env.fault_code);
-		r = env.fault_code;
-		goto err_result;
+		return env.fault_code;
 	}
 
 	xmlrpc_struct_find_value(&env, result, "token", &token_xmlval);
 	xmlrpc_read_string(&env, token_xmlval, token);
 
-	xmlrpc_DECREF(result);
-	xmlrpc_DECREF(token_xmlval);
-
-err_result:
-	return r;
+	return 0;
 }
 
 /*
@@ -86,13 +103,11 @@ err_result:
  */
 static const char *struct_get_string(xmlrpc_value *s, const char *key)
 {
-	xmlrpc_value *xmlval;
+	CLEANUP_XMLRPC_DECREF xmlrpc_value *xmlval = NULL;
 	const char *str;
 
 	xmlrpc_struct_find_value(&env, s, key, &xmlval);
 	xmlrpc_read_string(&env, xmlval, &str);
-
-	xmlrpc_DECREF(xmlval);
 
 	return str;
 }
@@ -100,20 +115,18 @@ static const char *struct_get_string(xmlrpc_value *s, const char *key)
 static int search_get_results(const char *token, unsigned long long hash, int filesize,
                               const char *lang, const char *filename, xmlrpc_value **data)
 {
-	xmlrpc_value *query1;	// hash-based query
-	xmlrpc_value *sublanguageid_xmlval;
-	xmlrpc_value *hash_xmlval;
-	xmlrpc_value *filesize_xmlval;
+	CLEANUP_XMLRPC_DECREF xmlrpc_value *query1 = NULL;	// hash-based query
+	CLEANUP_XMLRPC_DECREF xmlrpc_value *sublanguageid_xmlval = NULL;
+	CLEANUP_XMLRPC_DECREF xmlrpc_value *hash_xmlval = NULL;
+	CLEANUP_XMLRPC_DECREF xmlrpc_value *filesize_xmlval = NULL;
 	char hash_str[16 + 1];
 	char filesize_str[100];
 
-	xmlrpc_value *query2 = NULL;	// full-text query
-	xmlrpc_value *filename_xmlval = NULL;
+	CLEANUP_XMLRPC_DECREF xmlrpc_value *query2 = NULL;	// full-text query
+	CLEANUP_XMLRPC_DECREF xmlrpc_value *filename_xmlval = NULL;
 
-	xmlrpc_value *query_array;
-	xmlrpc_value *result;
-
-	int r = 0;
+	CLEANUP_XMLRPC_DECREF xmlrpc_value *query_array = NULL;
+	CLEANUP_XMLRPC_DECREF xmlrpc_value *result = NULL;
 
 	query_array = xmlrpc_array_new(&env);
 
@@ -146,34 +159,16 @@ static int search_get_results(const char *token, unsigned long long hash, int fi
 	result = xmlrpc_client_call(&env, XMLRPC_URL, "SearchSubtitles", "(sA)", token, query_array);
 	if (env.fault_occurred) {
 		fprintf(stderr, "query failed: %s (%d)\n", env.fault_string, env.fault_code);
-		r = env.fault_code;
-		goto err_result;
+		return env.fault_code;
 	}
 
 	xmlrpc_struct_read_value(&env, result, "data", data);
 	if (env.fault_occurred) {
 		fprintf(stderr, "failed to get data: %s (%d)\n", env.fault_string, env.fault_code);
-		r = env.fault_code;
-		goto err_data;
+		return env.fault_code;
 	}
 
-	// cleanup
-err_data:
-	xmlrpc_DECREF(result);
-
-err_result:
-	xmlrpc_DECREF(query1);
-	xmlrpc_DECREF(sublanguageid_xmlval);
-	xmlrpc_DECREF(hash_xmlval);
-	xmlrpc_DECREF(filesize_xmlval);
-	xmlrpc_DECREF(query_array);
-
-	if (!hash_search_only) {
-		xmlrpc_DECREF(query2);
-		xmlrpc_DECREF(filename_xmlval);
-	}
-
-	return r;
+	return 0;
 }
 
 static int choose_from_results(xmlrpc_value *results, int *sub_id, const char **sub_filename)
@@ -198,7 +193,7 @@ static int choose_from_results(xmlrpc_value *results, int *sub_id, const char **
 
 	/*
 	 * In order to properly align the table later, we
-	 * need the length of the longest release_name and 
+	 * need the length of the longest release_name and
 	 * filename and the number of digits of n.
 	 * Everything else is of fixed length.
 	 *
@@ -213,13 +208,12 @@ static int choose_from_results(xmlrpc_value *results, int *sub_id, const char **
 	int digit_count = log10(n) + 1;
 
 	for (int i = 0; i < n; i++) {
-		xmlrpc_value *oneresult;
+		CLEANUP_XMLRPC_DECREF xmlrpc_value *oneresult = NULL;
 		xmlrpc_array_read_item(&env, results, i, &oneresult);
 
 		// dear OpenSubtitles.org, why are these IDs provided as strings?
-		const char *sub_id_str = struct_get_string(oneresult, "IDSubtitleFile");
-		const char *matched_by_str = struct_get_string(oneresult, "MatchedBy");
-
+		CLEANUP_FREE const char *sub_id_str = struct_get_string(oneresult, "IDSubtitleFile");
+		CLEANUP_FREE const char *matched_by_str = struct_get_string(oneresult, "MatchedBy");
 
 		sub_infos[i].id = strtol(sub_id_str, NULL, 10);
 		sub_infos[i].matched_by_hash = strcmp(matched_by_str, "moviehash") == 0;
@@ -237,10 +231,6 @@ static int choose_from_results(xmlrpc_value *results, int *sub_id, const char **
 		s = strlen(sub_infos[i].filename);
 		if (s > align_filename)
 			align_filename = s;
-
-		xmlrpc_DECREF(oneresult);
-		free((void *)sub_id_str);
-		free((void *)matched_by_str);
 	}
 
 	// print header
@@ -257,8 +247,8 @@ static int choose_from_results(xmlrpc_value *results, int *sub_id, const char **
 
 	// print separator
 	for (int i = 0; i < c; i++)
-		putchar('-');	
-	
+		putchar('-');
+
 	putchar('\n');
 
 	// print list
@@ -278,7 +268,7 @@ static int choose_from_results(xmlrpc_value *results, int *sub_id, const char **
 		if (never_ask) {
 			sel = 1;
 		} else {
-			char *line = NULL;
+			CLEANUP_FREE char *line = NULL;
 			size_t len = 0;
 			char *endptr = NULL;
 			do {
@@ -286,13 +276,13 @@ static int choose_from_results(xmlrpc_value *results, int *sub_id, const char **
 				getline(&line, &len, stdin);
 				sel = strtol(line, &endptr, 10);
 			} while (*endptr != '\n' || sel < 1 || sel > n);
-			free(line);
 		}
 	}
 
 	*sub_id = sub_infos[sel - 1].id;
 	*sub_filename = strdup(sub_infos[sel - 1].filename);
 
+	// __attribute(cleanup)__ can't be used in structs, let alone arrays
 	for (int i = 0; i < n; i++) {
 		free((void *)sub_infos[i].lang);
 		free((void *)sub_infos[i].release_name);
@@ -304,15 +294,15 @@ static int choose_from_results(xmlrpc_value *results, int *sub_id, const char **
 
 static int sub_download(const char *token, int sub_id, const char *file_path)
 {
-	xmlrpc_value *sub_id_xmlval;
-	xmlrpc_value *query_array;
-	xmlrpc_value *result;
+	CLEANUP_XMLRPC_DECREF xmlrpc_value *sub_id_xmlval = NULL;
+	CLEANUP_XMLRPC_DECREF xmlrpc_value *query_array = NULL;
+	CLEANUP_XMLRPC_DECREF xmlrpc_value *result = NULL;;
 
-	xmlrpc_value *data;	  // result -> data
-	xmlrpc_value *data_0;	  // result -> data[0]
-	xmlrpc_value *data_0_sub; // result -> data[0][data]
+	CLEANUP_XMLRPC_DECREF xmlrpc_value *data = NULL;       // result -> data
+	CLEANUP_XMLRPC_DECREF xmlrpc_value *data_0 = NULL;     // result -> data[0]
+	CLEANUP_XMLRPC_DECREF xmlrpc_value *data_0_sub = NULL; // result -> data[0][data]
 
-	const char *sub_base64;	  // the subtitle, gzipped and base64 encoded
+	CLEANUP_FREE const char *sub_base64 = NULL;	  // the subtitle, gzipped and base64 encoded
 
 	// zlib stuff, see also http://zlib.net/zlib_how.html
 	int z_ret;
@@ -325,7 +315,7 @@ static int sub_download(const char *token, int sub_id, const char *file_path)
 	z_strm.avail_in = 0;
 	z_strm.next_in = Z_NULL;
 
-	FILE *f;
+	CLEANUP_FCLOSE FILE *f = NULL;
 	int r = 0;
 
 	// check if file already exists
@@ -334,8 +324,7 @@ static int sub_download(const char *token, int sub_id, const char *file_path)
 			puts("file already exists, overwriting.");
 		} else {
 			fputs("file already exists, aborting. Use -f to force an overwrite.\n", stderr);
-			r = errno;
-			goto err_file_exists;
+			return errno;
 		}
 	}
 
@@ -348,8 +337,7 @@ static int sub_download(const char *token, int sub_id, const char *file_path)
 	result = xmlrpc_client_call(&env, XMLRPC_URL, "DownloadSubtitles", "(sA)", token, query_array);
 	if (env.fault_occurred) {
 		fprintf(stderr, "query failed: %s (%d)\n", env.fault_string, env.fault_code);
-		r = env.fault_code;
-		goto err_result;
+		return env.fault_code;
 	}
 
 	// get base64 encoded data
@@ -362,16 +350,14 @@ static int sub_download(const char *token, int sub_id, const char *file_path)
 	f = fopen(file_path, "w+");
 	if (!f) {
 		perror("failed to open output file");
-		r = errno;
-		goto err_file;
+		return errno;
 	}
 
 	// 16+MAX_WBITS is needed for gzip support
 	z_ret = inflateInit2(&z_strm, 16 + MAX_WBITS);
 	if (z_ret != Z_OK) {
 		fprintf(stderr, "failed to init zlib (%i)\n", z_ret);
-		r = z_ret;
-		goto err_zlib_init;
+		return z_ret;
 	}
 	int b64_state = 0;
 	unsigned int b64_save = 0;
@@ -396,7 +382,7 @@ static int sub_download(const char *token, int sub_id, const char *file_path)
 			case Z_MEM_ERROR:
 				r = z_ret;
 				fprintf(stderr, "zlib error: %s (%d)\n", z_strm.msg, z_ret);
-				goto err_inflate;
+				goto finish;
 			}
 			// write decompressed data from z_out to file
 			unsigned int have = ZLIB_CHUNK - z_strm.avail_out;
@@ -404,25 +390,9 @@ static int sub_download(const char *token, int sub_id, const char *file_path)
 		} while (z_strm.avail_out == 0);
 	} while (z_ret != Z_STREAM_END);
 
-	// cleanup
-err_inflate:
+finish:
 	inflateEnd(&z_strm);
 
-err_zlib_init:
-	fclose(f);
-
-err_file:
-	xmlrpc_DECREF(result);
-	xmlrpc_DECREF(data);
-	xmlrpc_DECREF(data_0);
-	xmlrpc_DECREF(data_0_sub);
-	free((void *)sub_base64);
-
-err_result:
-	xmlrpc_DECREF(sub_id_xmlval);
-	xmlrpc_DECREF(query_array);
-
-err_file_exists:
 	return r;
 }
 
@@ -504,17 +474,17 @@ static const char *get_sub_path(const char *filepath, const char *sub_filename)
 
 int main(int argc, char *argv[])
 {
-	const char *filepath;
-	const char *token;
+	const char *filepath = NULL; // no cleanup because it will point to argv[0]
+	CLEANUP_FREE const char *token = NULL;
 
-	FILE *f;
+	CLEANUP_FCLOSE FILE *f = NULL;
 	unsigned long long hash;
 	int filesize;
 
-	xmlrpc_value *results;
+	CLEANUP_XMLRPC_DECREF xmlrpc_value *results = NULL;
 
-	const char *sub_filename = NULL;
-	const char *sub_filepath;
+	CLEANUP_FREE const char *sub_filename = NULL;
+	CLEANUP_FREE const char *sub_filepath = NULL;
 
 	int r = EXIT_SUCCESS;
 
@@ -563,7 +533,6 @@ int main(int argc, char *argv[])
 		default:
 			return EXIT_FAILURE;
 		}
-
 	}
 
 	// check if user has specified exactly one file
@@ -591,12 +560,12 @@ int main(int argc, char *argv[])
 	if (env.fault_occurred) {
 		fprintf(stderr, "failed to init xmlrpc client: %s (%d)\n", env.fault_string, env.fault_code);
 		r = env.fault_code;
-		goto err_xmlrpc_init;
+		goto finish;
 	}
 	// login
 	r = login(&token);
 	if (r != 0)
-		goto err_login;
+		goto finish;
 
 	// start search
 	puts("searching...");
@@ -607,41 +576,28 @@ int main(int argc, char *argv[])
 
 	r = search_get_results(token, hash, filesize, lang, filename, &results);
 	if (r != 0) {
-		goto err_results;
+		goto finish;
 	}
 	// for some reason [data] is of type XMLRPC_TYPE_BOOL if the search returns no hits!?
 	if (xmlrpc_value_type(results) != XMLRPC_TYPE_ARRAY) {
 		puts("no results.");
 		r = EXIT_FAILURE;
-		goto err_noresults;
+		goto finish;
 	}
 	// let user choose the subtitle to download
 	int sub_id = 0;
 	r = choose_from_results(results, &sub_id, &sub_filename);
 	if (r != 0)
-		goto err_choose;
+		goto finish;
 
 	sub_filepath = get_sub_path(filepath, sub_filename);
 
 	printf("downloading to %s ...\n", sub_filepath);
 	r = sub_download(token, sub_id, sub_filepath);
 
-	free((void *)sub_filepath);
-	fclose(f);
-
-err_choose:
-	free((void *)sub_filename);
-
-err_noresults:
-	xmlrpc_DECREF(results);
-
-err_results:
-	free((void *)token);
-
-err_login:
+finish:
 	xmlrpc_client_cleanup();
-
-err_xmlrpc_init:
 	xmlrpc_env_clean(&env);
+
 	return r;
 }
