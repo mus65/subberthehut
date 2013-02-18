@@ -24,8 +24,12 @@
 #define HEADER_ID              '#'
 #define HEADER_MATCHED_BY_HASH 'H'
 #define HEADER_LANG            "Lng"
-#define HEADER_RELEASE_NAME    "Release Name"
-#define HEADER_FILENAME        "Filename"
+#define HEADER_RELEASE_NAME    "Release / File Name"
+
+#define SEP_VERTICAL           "\342\224\202"
+#define SEP_HORIZONTAL         "\342\224\200"
+#define SEP_CROSS              "\342\224\274"
+#define SEP_UP_RIGHT           "\342\224\224"
 
 /* __attribute__(cleanup) */
 #define _cleanup_free_           __attribute__((cleanup(cleanup_free)))
@@ -172,6 +176,21 @@ static int search_get_results(const char *token, uint64_t hash, int filesize,
 	return 0;
 }
 
+static void print_separator(int c, int digit_count)
+{
+	for (int i = 0; i < c; i++) {
+		if (i == digit_count + 1 ||
+		    i == digit_count + 1 + 4 || 
+		    i == digit_count + 1 + 4 + 6) {
+			fputs(SEP_CROSS, stdout);
+		}
+		else {
+			fputs(SEP_HORIZONTAL, stdout);
+		}
+	}
+	putchar('\n');
+}
+
 static int choose_from_results(xmlrpc_value *results, int *sub_id, const char **sub_filename)
 {
 	struct sub_info {
@@ -199,13 +218,11 @@ static int choose_from_results(xmlrpc_value *results, int *sub_id, const char **
 	 * Everything else is of fixed length.
 	 *
 	 * For the rare case that the longest release_name
-	 * or filename is smaller than the corresponding
-	 * header string, set them to the length of the
-	 * header strings initially, otherwise the output
-	 * gets screwed up.
+	 * or filename is smaller than the header string,
+	 * set them to the length of the header string
+	 * initially, otherwise the output gets screwed up.
 	 */
 	int align_release_name = strlen(HEADER_RELEASE_NAME);
-	int align_filename = strlen(HEADER_FILENAME);
 
 	// count number of digits
 	int digit_count = 0;
@@ -237,38 +254,42 @@ static int choose_from_results(xmlrpc_value *results, int *sub_id, const char **
 			align_release_name = s;
 
 		s = strlen(sub_infos[i].filename);
-		if (s > align_filename)
-			align_filename = s;
+		if (s > align_release_name)
+			align_release_name = s;
 	}
 
-	// print header
+	// header
 	putchar('\n');
-	int c = printf("%-*c | %c | %s | %-*s | %-*s\n",
+	int c = printf("%-*c " SEP_VERTICAL " %c " SEP_VERTICAL " %s " SEP_VERTICAL " %-*s\n",
 	               digit_count,
 	               HEADER_ID,
 	               HEADER_MATCHED_BY_HASH,
 	               HEADER_LANG,
 	               align_release_name,
-	               HEADER_RELEASE_NAME,
-	               align_filename,
-	               HEADER_FILENAME);
+	               HEADER_RELEASE_NAME);
 
-	// print separator
-	for (int i = 0; i < c; i++)
-		putchar('-');
+	c -= 5;
 
-	putchar('\n');
+	// separator
+	print_separator(c, digit_count);
 
-	// print list
+	// list
 	for (int i = 0; i < n; i++) {
-		printf("%-*i | %c | %s | %-*s | %s\n",
+		printf("%-*i " SEP_VERTICAL " %c " SEP_VERTICAL " %s " SEP_VERTICAL " %-*s\n",
 		       digit_count,
 		       i + 1,
 		       sub_infos[i].matched_by_hash ? '*' : ' ',
 		       sub_infos[i].lang,
 		       align_release_name,
-		       sub_infos[i].release_name,
+		       sub_infos[i].release_name);
+
+		printf("%-*s " SEP_VERTICAL "   " SEP_VERTICAL "     " SEP_VERTICAL " " SEP_UP_RIGHT "%s\n",
+		       digit_count,
+		       "",
 		       sub_infos[i].filename);
+
+		if (i != n - 1)
+			print_separator(c, digit_count);
 	}
 	putchar('\n');
 
