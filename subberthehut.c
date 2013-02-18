@@ -5,6 +5,8 @@
 #include <errno.h>
 #include <stdbool.h>
 #include <math.h>
+#include <stdint.h>
+#include <inttypes.h>
 
 #include <xmlrpc-c/base.h>
 #include <xmlrpc-c/client.h>
@@ -64,9 +66,9 @@ static bool same_name = false;
  * copied and modified from:
  * http://trac.opensubtitles.org/projects/opensubtitles/wiki/HashSourceCodes
  */
-static unsigned long long compute_hash(FILE *handle)
+static uint64_t compute_hash(FILE *handle)
 {
-	unsigned long long hash, fsize, tmp, i;
+	uint64_t hash, fsize, tmp, i;
 
 	fseek(handle, 0, SEEK_END);
 	fsize = ftell(handle);
@@ -112,7 +114,7 @@ static const char *struct_get_string(xmlrpc_value *s, const char *key)
 	return str;
 }
 
-static int search_get_results(const char *token, unsigned long long hash, int filesize,
+static int search_get_results(const char *token, uint64_t hash, int filesize,
                               const char *lang, const char *filename, xmlrpc_value **data)
 {
 	_cleanup_xmlrpc_DECREF_ xmlrpc_value *query1 = NULL;	// hash-based query
@@ -135,7 +137,7 @@ static int search_get_results(const char *token, unsigned long long hash, int fi
 	sublanguageid_xmlval = xmlrpc_string_new(&env, lang);
 	xmlrpc_struct_set_value(&env, query1, "sublanguageid", sublanguageid_xmlval);
 
-	sprintf(hash_str, "%llx", hash);
+	sprintf(hash_str, "%" PRIx64, hash);
 	hash_xmlval = xmlrpc_string_new(&env, hash_str);
 	xmlrpc_struct_set_value(&env, query1, "moviehash", hash_xmlval);
 
@@ -478,7 +480,7 @@ int main(int argc, char *argv[])
 	_cleanup_free_ const char *token = NULL;
 
 	_cleanup_fclose_ FILE *f = NULL;
-	unsigned long long hash;
+	uint64_t hash;
 	int filesize;
 
 	_cleanup_xmlrpc_DECREF_ xmlrpc_value *results = NULL;
