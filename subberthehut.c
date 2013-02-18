@@ -4,7 +4,6 @@
 #include <string.h>
 #include <errno.h>
 #include <stdbool.h>
-#include <math.h>
 #include <stdint.h>
 #include <inttypes.h>
 
@@ -14,7 +13,7 @@
 #include <zlib.h>
 
 #define NAME                   "subberthehut"
-#define VERSION                "0.3"
+#define VERSION                "1"
 
 #define XMLRPC_URL             "http://api.opensubtitles.org/xml-rpc"
 #define LOGIN_LANGCODE         "en"
@@ -207,7 +206,14 @@ static int choose_from_results(xmlrpc_value *results, int *sub_id, const char **
 	 */
 	int align_release_name = strlen(HEADER_RELEASE_NAME);
 	int align_filename = strlen(HEADER_FILENAME);
-	int digit_count = log10(n) + 1;
+
+	// count number of digits
+	int digit_count = 0;
+	int n_tmp = n;
+	while (n_tmp) {
+		n_tmp /= 10;
+		digit_count++;
+	}
 
 	for (int i = 0; i < n; i++) {
 		_cleanup_xmlrpc_DECREF_ xmlrpc_value *oneresult = NULL;
