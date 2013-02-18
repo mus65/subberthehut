@@ -26,10 +26,10 @@
 #define HEADER_RELEASE_NAME    "Release Name"
 #define HEADER_FILENAME        "Filename"
 
-/* __attribute__(cleanup)__ */
-#define CLEANUP_FREE           __attribute__((cleanup(cleanup_free)))
-#define CLEANUP_FCLOSE         __attribute__((cleanup(cleanup_fclose)))
-#define CLEANUP_XMLRPC_DECREF  __attribute__((cleanup(cleanup_xmlrpc_DECREF)))
+/* __attribute__(cleanup) */
+#define _cleanup_free_           __attribute__((cleanup(cleanup_free)))
+#define _cleanup_fclose_         __attribute__((cleanup(cleanup_fclose)))
+#define _cleanup_xmlrpc_DECREF_  __attribute__((cleanup(cleanup_xmlrpc_DECREF)))
 
 static void cleanup_free(void *p)
 {
@@ -47,7 +47,7 @@ static void cleanup_xmlrpc_DECREF(xmlrpc_value **p)
 	if(*p)
 		xmlrpc_DECREF(*p);
 }
-/* end __attribute__(cleanup)__ */
+/* end __attribute__(cleanup) */
 
 static xmlrpc_env env;
 
@@ -83,8 +83,8 @@ static unsigned long long compute_hash(FILE *handle)
 
 static int login(const char **token)
 {
-	CLEANUP_XMLRPC_DECREF xmlrpc_value *result = NULL;
-	CLEANUP_XMLRPC_DECREF xmlrpc_value *token_xmlval = NULL;
+	_cleanup_xmlrpc_DECREF_ xmlrpc_value *result = NULL;
+	_cleanup_xmlrpc_DECREF_ xmlrpc_value *token_xmlval = NULL;
 
 	result = xmlrpc_client_call(&env, XMLRPC_URL, "LogIn", "(ssss)", "", "", LOGIN_LANGCODE, LOGIN_USER_AGENT);
 	if (env.fault_occurred) {
@@ -103,7 +103,7 @@ static int login(const char **token)
  */
 static const char *struct_get_string(xmlrpc_value *s, const char *key)
 {
-	CLEANUP_XMLRPC_DECREF xmlrpc_value *xmlval = NULL;
+	_cleanup_xmlrpc_DECREF_ xmlrpc_value *xmlval = NULL;
 	const char *str;
 
 	xmlrpc_struct_find_value(&env, s, key, &xmlval);
@@ -115,18 +115,18 @@ static const char *struct_get_string(xmlrpc_value *s, const char *key)
 static int search_get_results(const char *token, unsigned long long hash, int filesize,
                               const char *lang, const char *filename, xmlrpc_value **data)
 {
-	CLEANUP_XMLRPC_DECREF xmlrpc_value *query1 = NULL;	// hash-based query
-	CLEANUP_XMLRPC_DECREF xmlrpc_value *sublanguageid_xmlval = NULL;
-	CLEANUP_XMLRPC_DECREF xmlrpc_value *hash_xmlval = NULL;
-	CLEANUP_XMLRPC_DECREF xmlrpc_value *filesize_xmlval = NULL;
+	_cleanup_xmlrpc_DECREF_ xmlrpc_value *query1 = NULL;	// hash-based query
+	_cleanup_xmlrpc_DECREF_ xmlrpc_value *sublanguageid_xmlval = NULL;
+	_cleanup_xmlrpc_DECREF_ xmlrpc_value *hash_xmlval = NULL;
+	_cleanup_xmlrpc_DECREF_ xmlrpc_value *filesize_xmlval = NULL;
 	char hash_str[16 + 1];
 	char filesize_str[100];
 
-	CLEANUP_XMLRPC_DECREF xmlrpc_value *query2 = NULL;	// full-text query
-	CLEANUP_XMLRPC_DECREF xmlrpc_value *filename_xmlval = NULL;
+	_cleanup_xmlrpc_DECREF_ xmlrpc_value *query2 = NULL;	// full-text query
+	_cleanup_xmlrpc_DECREF_ xmlrpc_value *filename_xmlval = NULL;
 
-	CLEANUP_XMLRPC_DECREF xmlrpc_value *query_array = NULL;
-	CLEANUP_XMLRPC_DECREF xmlrpc_value *result = NULL;
+	_cleanup_xmlrpc_DECREF_ xmlrpc_value *query_array = NULL;
+	_cleanup_xmlrpc_DECREF_ xmlrpc_value *result = NULL;
 
 	query_array = xmlrpc_array_new(&env);
 
@@ -208,12 +208,12 @@ static int choose_from_results(xmlrpc_value *results, int *sub_id, const char **
 	int digit_count = log10(n) + 1;
 
 	for (int i = 0; i < n; i++) {
-		CLEANUP_XMLRPC_DECREF xmlrpc_value *oneresult = NULL;
+		_cleanup_xmlrpc_DECREF_ xmlrpc_value *oneresult = NULL;
 		xmlrpc_array_read_item(&env, results, i, &oneresult);
 
 		// dear OpenSubtitles.org, why are these IDs provided as strings?
-		CLEANUP_FREE const char *sub_id_str = struct_get_string(oneresult, "IDSubtitleFile");
-		CLEANUP_FREE const char *matched_by_str = struct_get_string(oneresult, "MatchedBy");
+		_cleanup_free_ const char *sub_id_str = struct_get_string(oneresult, "IDSubtitleFile");
+		_cleanup_free_ const char *matched_by_str = struct_get_string(oneresult, "MatchedBy");
 
 		sub_infos[i].id = strtol(sub_id_str, NULL, 10);
 		sub_infos[i].matched_by_hash = strcmp(matched_by_str, "moviehash") == 0;
@@ -268,7 +268,7 @@ static int choose_from_results(xmlrpc_value *results, int *sub_id, const char **
 		if (never_ask) {
 			sel = 1;
 		} else {
-			CLEANUP_FREE char *line = NULL;
+			_cleanup_free_ char *line = NULL;
 			size_t len = 0;
 			char *endptr = NULL;
 			do {
@@ -294,15 +294,15 @@ static int choose_from_results(xmlrpc_value *results, int *sub_id, const char **
 
 static int sub_download(const char *token, int sub_id, const char *file_path)
 {
-	CLEANUP_XMLRPC_DECREF xmlrpc_value *sub_id_xmlval = NULL;
-	CLEANUP_XMLRPC_DECREF xmlrpc_value *query_array = NULL;
-	CLEANUP_XMLRPC_DECREF xmlrpc_value *result = NULL;;
+	_cleanup_xmlrpc_DECREF_ xmlrpc_value *sub_id_xmlval = NULL;
+	_cleanup_xmlrpc_DECREF_ xmlrpc_value *query_array = NULL;
+	_cleanup_xmlrpc_DECREF_ xmlrpc_value *result = NULL;;
 
-	CLEANUP_XMLRPC_DECREF xmlrpc_value *data = NULL;       // result -> data
-	CLEANUP_XMLRPC_DECREF xmlrpc_value *data_0 = NULL;     // result -> data[0]
-	CLEANUP_XMLRPC_DECREF xmlrpc_value *data_0_sub = NULL; // result -> data[0][data]
+	_cleanup_xmlrpc_DECREF_ xmlrpc_value *data = NULL;       // result -> data
+	_cleanup_xmlrpc_DECREF_ xmlrpc_value *data_0 = NULL;     // result -> data[0]
+	_cleanup_xmlrpc_DECREF_ xmlrpc_value *data_0_sub = NULL; // result -> data[0][data]
 
-	CLEANUP_FREE const char *sub_base64 = NULL;	  // the subtitle, gzipped and base64 encoded
+	_cleanup_free_ const char *sub_base64 = NULL;	  // the subtitle, gzipped and base64 encoded
 
 	// zlib stuff, see also http://zlib.net/zlib_how.html
 	int z_ret;
@@ -315,7 +315,7 @@ static int sub_download(const char *token, int sub_id, const char *file_path)
 	z_strm.avail_in = 0;
 	z_strm.next_in = Z_NULL;
 
-	CLEANUP_FCLOSE FILE *f = NULL;
+	_cleanup_fclose_ FILE *f = NULL;
 	int r = 0;
 
 	// check if file already exists
@@ -474,17 +474,17 @@ static const char *get_sub_path(const char *filepath, const char *sub_filename)
 
 int main(int argc, char *argv[])
 {
-	const char *filepath = NULL; // no cleanup because it will point to argv[0]
-	CLEANUP_FREE const char *token = NULL;
+	const char *filepath = NULL; // no cleanup because it will point to argv
+	_cleanup_free_ const char *token = NULL;
 
-	CLEANUP_FCLOSE FILE *f = NULL;
+	_cleanup_fclose_ FILE *f = NULL;
 	unsigned long long hash;
 	int filesize;
 
-	CLEANUP_XMLRPC_DECREF xmlrpc_value *results = NULL;
+	_cleanup_xmlrpc_DECREF_ xmlrpc_value *results = NULL;
 
-	CLEANUP_FREE const char *sub_filename = NULL;
-	CLEANUP_FREE const char *sub_filepath = NULL;
+	_cleanup_free_ const char *sub_filename = NULL;
+	_cleanup_free_ const char *sub_filepath = NULL;
 
 	int r = EXIT_SUCCESS;
 
