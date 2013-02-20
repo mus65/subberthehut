@@ -4,12 +4,11 @@
 #include <string.h>
 #include <errno.h>
 #include <stdbool.h>
-#include <stdint.h>
-#include <inttypes.h>
+#include <inttypes.h> // uint64_t / PRIx64
 
 #include <xmlrpc-c/base.h>
 #include <xmlrpc-c/client.h>
-#include <glib.h>
+#include <glib.h> // g_base64_decode_step
 #include <zlib.h>
 
 #define NAME                   "subberthehut"
@@ -312,7 +311,7 @@ static int choose_from_results(xmlrpc_value *results, int *sub_id, const char **
 	*sub_id = sub_infos[sel - 1].id;
 	*sub_filename = strdup(sub_infos[sel - 1].filename);
 
-	// __attribute(cleanup)__ can't be used in structs, let alone arrays
+	// __attribute__(cleanup) can't be used in structs, let alone arrays
 	for (int i = 0; i < n; i++) {
 		free((void *)sub_infos[i].lang);
 		free((void *)sub_infos[i].release_name);
