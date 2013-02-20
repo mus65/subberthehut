@@ -55,6 +55,7 @@ static void cleanup_xmlrpc_DECREF(xmlrpc_value **p)
 /* end __attribute__(cleanup) */
 
 static xmlrpc_env env;
+static xmlrpc_client *client;
 
 // options default values
 static const char *lang = "eng";
@@ -91,7 +92,7 @@ static int login(const char **token)
 	_cleanup_xmlrpc_DECREF_ xmlrpc_value *result = NULL;
 	_cleanup_xmlrpc_DECREF_ xmlrpc_value *token_xmlval = NULL;
 
-	result = xmlrpc_client_call(&env, XMLRPC_URL, "LogIn", "(ssss)", "", "", LOGIN_LANGCODE, LOGIN_USER_AGENT);
+	xmlrpc_client_call2f(&env, client, XMLRPC_URL, "LogIn", &result, "(ssss)", "", "", LOGIN_LANGCODE, LOGIN_USER_AGENT);
 	if (env.fault_occurred) {
 		fprintf(stderr, "login failed: %s (%d)\n", env.fault_string, env.fault_code);
 		return env.fault_code;
@@ -161,7 +162,7 @@ static int search_get_results(const char *token, uint64_t hash, int filesize,
 		xmlrpc_array_append_item(&env, query_array, query2);
 	}
 
-	result = xmlrpc_client_call(&env, XMLRPC_URL, "SearchSubtitles", "(sA)", token, query_array);
+	xmlrpc_client_call2f(&env, client, XMLRPC_URL, "SearchSubtitles", &result, "(sA)", token, query_array);
 	if (env.fault_occurred) {
 		fprintf(stderr, "query failed: %s (%d)\n", env.fault_string, env.fault_code);
 		return env.fault_code;
@@ -363,7 +364,7 @@ static int sub_download(const char *token, int sub_id, const char *file_path)
 	query_array = xmlrpc_array_new(&env);
 	xmlrpc_array_append_item(&env, query_array, sub_id_xmlval);
 
-	result = xmlrpc_client_call(&env, XMLRPC_URL, "DownloadSubtitles", "(sA)", token, query_array);
+	xmlrpc_client_call2f(&env, client, XMLRPC_URL, "DownloadSubtitles", &result, "(sA)", token, query_array);
 	if (env.fault_occurred) {
 		fprintf(stderr, "query failed: %s (%d)\n", env.fault_string, env.fault_code);
 		return env.fault_code;
@@ -584,8 +585,9 @@ int main(int argc, char *argv[])
 
 	// xmlrpc init
 	xmlrpc_env_init(&env);
+	xmlrpc_client_setup_global_const(&env);
 
-	xmlrpc_client_init2(&env, XMLRPC_CLIENT_NO_FLAGS, NAME, VERSION, NULL, 0);
+	xmlrpc_client_create(&env, XMLRPC_CLIENT_NO_FLAGS, NAME, VERSION, NULL, 0, &client);
 	if (env.fault_occurred) {
 		fprintf(stderr, "failed to init xmlrpc client: %s (%d)\n", env.fault_string, env.fault_code);
 		r = env.fault_code;
@@ -625,8 +627,9 @@ int main(int argc, char *argv[])
 	r = sub_download(token, sub_id, sub_filepath);
 
 finish:
-	xmlrpc_client_cleanup();
 	xmlrpc_env_clean(&env);
+	xmlrpc_client_destroy(client);
+	xmlrpc_client_teardown_global_const();
 
 	return r;
 }
