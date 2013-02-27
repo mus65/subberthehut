@@ -67,6 +67,11 @@ static bool hash_search_only = false;
 static bool name_search_only = false;
 static bool same_name = false;
 
+static int log_oom() {
+	fputs("Out of memory.", stderr);
+	return ENOMEM;
+}
+
 /*
  * creates the 64-bit hash used for the search query.
  * copied and modified from:
@@ -144,10 +149,16 @@ static int search_get_results(const char *token, uint64_t hash, int filesize,
 		sublanguageid_xmlval = xmlrpc_string_new(&env, lang);
 		xmlrpc_struct_set_value(&env, query1, "sublanguageid", sublanguageid_xmlval);
 		asprintf(&hash_str, "%" PRIx64, hash);
+		if (hash_str == NULL)
+			return log_oom();
+		
 		hash_xmlval = xmlrpc_string_new(&env, hash_str);
 		xmlrpc_struct_set_value(&env, query1, "moviehash", hash_xmlval);
 
 		asprintf(&filesize_str, "%i", filesize);
+		if (filesize_str == NULL)
+			return log_oom();
+		
 		filesize_xmlval = xmlrpc_string_new(&env, filesize_str);
 		xmlrpc_struct_set_value(&env, query1, "moviebytesize", filesize_xmlval);
 		xmlrpc_array_append_item(&env, query_array, query1);
@@ -315,6 +326,8 @@ static int choose_from_results(xmlrpc_value *results, int *sub_id, const char **
 
 	*sub_id = sub_infos[sel - 1].id;
 	*sub_filename = strdup(sub_infos[sel - 1].filename);
+	if (*sub_filename == NULL)
+		return log_oom();
 
 	// __attribute__(cleanup) can't be used in structs, let alone arrays
 	for (int i = 0; i < n; i++) {
@@ -492,6 +505,9 @@ static const char *get_sub_path(const char *filepath, const char *sub_filename)
 			index = (lastdot - filepath);
 
 		sub_filepath = malloc(index + 1 + strlen(sub_ext) + 1);
+		if (sub_filepath == NULL)
+			return NULL;
+
 		strncpy(sub_filepath, filepath, index);
 		sub_filepath[index] = '\0';
 		strcat(sub_filepath, sub_ext);
@@ -499,9 +515,14 @@ static const char *get_sub_path(const char *filepath, const char *sub_filename)
 		const char *lastslash = strrchr(filepath, '/');
 		if (lastslash == NULL) {
 			sub_filepath = strdup(sub_filename);
+			if (sub_filepath == NULL)
+				return NULL;
 		} else {
 			int index = (lastslash - filepath);
 			sub_filepath = malloc(index + 1 + strlen(sub_filename) + 1);
+			if (sub_filepath == NULL)
+				return NULL;
+
 			strncpy(sub_filepath, filepath, index + 1);
 			sub_filepath[index + 1] = '\0';
 			strcat(sub_filepath, sub_filename);
@@ -640,6 +661,8 @@ int main(int argc, char *argv[])
 		goto finish;
 
 	sub_filepath = get_sub_path(filepath, sub_filename);
+	if (sub_filepath == NULL)
+		return log_oom();
 
 	printf("downloading to %s ...\n", sub_filepath);
 	r = sub_download(token, sub_id, sub_filepath);
