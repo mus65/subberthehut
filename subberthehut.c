@@ -391,13 +391,14 @@ static int sub_download(const char *token, int sub_id, const char *file_path)
 		fprintf(stderr, "failed to init zlib (%i)\n", z_ret);
 		return z_ret;
 	}
+
 	int b64_state = 0;
 	unsigned int b64_save = 0;
 	unsigned int b64_offset = 0;
 	do {
 		// write decoded data to z_in
 		z_strm.avail_in = g_base64_decode_step(&sub_base64[b64_offset], ZLIB_CHUNK, z_in, &b64_state, &b64_save);
-		b64_offset = z_strm.avail_in * 4/3; //  base64 encodes 3 bytes in 4 chars
+		b64_offset = z_strm.avail_in * 4 / 3; //  base64 encodes 3 bytes in 4 chars
 		if (z_strm.avail_in == 0)
 			break;
 
@@ -514,7 +515,7 @@ int main(int argc, char *argv[])
 
 	_cleanup_fclose_ FILE *f = NULL;
 	uint64_t hash = 0;
-	int filesize;
+	int filesize = 0;
 
 	_cleanup_xmlrpc_DECREF_ xmlrpc_value *results = NULL;
 
@@ -584,17 +585,19 @@ int main(int argc, char *argv[])
 	}
 	// get hash/filesize
 	filepath = argv[optind];
-	f = fopen(filepath, "r");
-	if (!f) {
-		perror("failed to open file");
-		return errno;
-	}
 
-	if (!name_search_only)
+	if (!name_search_only) {
+		f = fopen(filepath, "r");
+		if (!f) {
+			perror("failed to open file");
+			return errno;
+		}
+
 		hash = compute_hash(f);
 
-	fseek(f, 0, SEEK_END);
-	filesize = ftell(f);
+		fseek(f, 0, SEEK_END);
+		filesize = ftell(f);
+	}
 
 	// xmlrpc init
 	xmlrpc_env_init(&env);
