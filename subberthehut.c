@@ -148,15 +148,15 @@ static int search_get_results(const char *token, uint64_t hash, int filesize,
 		query1 = xmlrpc_struct_new(&env);
 		sublanguageid_xmlval = xmlrpc_string_new(&env, lang);
 		xmlrpc_struct_set_value(&env, query1, "sublanguageid", sublanguageid_xmlval);
-		asprintf(&hash_str, "%" PRIx64, hash);
-		if (hash_str == NULL)
+		int r = asprintf(&hash_str, "%" PRIx64, hash);
+		if (r == -1)
 			return log_oom();
 		
 		hash_xmlval = xmlrpc_string_new(&env, hash_str);
 		xmlrpc_struct_set_value(&env, query1, "moviehash", hash_xmlval);
 
-		asprintf(&filesize_str, "%i", filesize);
-		if (filesize_str == NULL)
+		r = asprintf(&filesize_str, "%i", filesize);
+		if (r == -1)
 			return log_oom();
 		
 		filesize_xmlval = xmlrpc_string_new(&env, filesize_str);
