@@ -62,6 +62,7 @@ static bool force_overwrite = false;
 static bool always_ask = false;
 static bool never_ask = false;
 static bool hash_search_only = false;
+static bool name_search_only = false;
 static bool same_name = false;
 
 /*
@@ -136,23 +137,26 @@ static int search_get_results(const char *token, uint64_t hash, int filesize,
 	query_array = xmlrpc_array_new(&env);
 
 	// create hash-based query
-	query1 = xmlrpc_struct_new(&env);
-	sublanguageid_xmlval = xmlrpc_string_new(&env, lang);
-	xmlrpc_struct_set_value(&env, query1, "sublanguageid", sublanguageid_xmlval);
 
-	sprintf(hash_str, "%" PRIx64, hash);
-	hash_xmlval = xmlrpc_string_new(&env, hash_str);
-	xmlrpc_struct_set_value(&env, query1, "moviehash", hash_xmlval);
+	if (!name_search_only) {
+		query1 = xmlrpc_struct_new(&env);
+		sublanguageid_xmlval = xmlrpc_string_new(&env, lang);
+		xmlrpc_struct_set_value(&env, query1, "sublanguageid", sublanguageid_xmlval);
+		sprintf(hash_str, "%" PRIx64, hash);
+		hash_xmlval = xmlrpc_string_new(&env, hash_str);
+		xmlrpc_struct_set_value(&env, query1, "moviehash", hash_xmlval);
 
-	sprintf(filesize_str, "%i", filesize);
-	filesize_xmlval = xmlrpc_string_new(&env, filesize_str);
-	xmlrpc_struct_set_value(&env, query1, "moviebytesize", filesize_xmlval);
-	xmlrpc_array_append_item(&env, query_array, query1);
+		sprintf(filesize_str, "%i", filesize);
+		filesize_xmlval = xmlrpc_string_new(&env, filesize_str);
+		xmlrpc_struct_set_value(&env, query1, "moviebytesize", filesize_xmlval);
+		xmlrpc_array_append_item(&env, query_array, query1);
+	}
 
 	// create full-text query
 	if (!hash_search_only) {
 		query2 = xmlrpc_struct_new(&env);
 
+		sublanguageid_xmlval = xmlrpc_string_new(&env, lang);
 		xmlrpc_struct_set_value(&env, query2, "sublanguageid", sublanguageid_xmlval);
 
 		filename_xmlval = xmlrpc_string_new(&env, filename);
@@ -462,6 +466,7 @@ static void usage()
 	     "                         search result will be downloaded.\n"
 	     " -f, --force             Overwrite output file if it already exists.\n"
 	     " -o, --hash-search-only  Only do a hash-based search.\n"
+	     " -O, --name-search-only  Only do a name-based search.\n"
 	     " -s, --same-name         Download the subtitle to the same filename as the\n"
 	     "                         original file, only replacing the file extension.\n");
 }
@@ -509,7 +514,7 @@ int main(int argc, char *argv[])
 	_cleanup_free_ const char *token = NULL;
 
 	_cleanup_fclose_ FILE *f = NULL;
-	uint64_t hash;
+	uint64_t hash = 0;
 	int filesize;
 
 	_cleanup_xmlrpc_DECREF_ xmlrpc_value *results = NULL;
@@ -527,11 +532,12 @@ int main(int argc, char *argv[])
 		{"never-ask", no_argument, NULL, 'n'},
 		{"force", no_argument, NULL, 'f'},
 		{"hash-search-only", no_argument, NULL, 'o'},
+		{"name-search-only", no_argument, NULL, 'O'},
 		{"same-name", no_argument, NULL, 's'}
 	};
 
 	int c;
-	while ((c = getopt_long(argc, argv, "hl:anfos", opts, NULL)) != -1) {
+	while ((c = getopt_long(argc, argv, "hl:anfoOs", opts, NULL)) != -1) {
 		switch (c) {
 		case 'h':
 			usage();
@@ -555,6 +561,12 @@ int main(int argc, char *argv[])
 
 		case 'o':
 			hash_search_only = true;
+			name_search_only = false;
+			break;
+
+		case 'O':
+			name_search_only = true;
+			hash_search_only = false;
 			break;
 
 		case 's':
@@ -579,7 +591,8 @@ int main(int argc, char *argv[])
 		return errno;
 	}
 
-	hash = compute_hash(f);
+	if (!name_search_only)
+		hash = compute_hash(f);
 
 	fseek(f, 0, SEEK_END);
 	filesize = ftell(f);
