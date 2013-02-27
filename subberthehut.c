@@ -1,3 +1,5 @@
+#define _GNU_SOURCE
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <getopt.h>
@@ -125,8 +127,8 @@ static int search_get_results(const char *token, uint64_t hash, int filesize,
 	_cleanup_xmlrpc_DECREF_ xmlrpc_value *sublanguageid_xmlval = NULL;
 	_cleanup_xmlrpc_DECREF_ xmlrpc_value *hash_xmlval = NULL;
 	_cleanup_xmlrpc_DECREF_ xmlrpc_value *filesize_xmlval = NULL;
-	char hash_str[16 + 1];
-	char filesize_str[100];
+	_cleanup_free_ char *hash_str = NULL;
+	_cleanup_free_ char *filesize_str = NULL;
 
 	_cleanup_xmlrpc_DECREF_ xmlrpc_value *query2 = NULL;	// full-text query
 	_cleanup_xmlrpc_DECREF_ xmlrpc_value *filename_xmlval = NULL;
@@ -141,11 +143,11 @@ static int search_get_results(const char *token, uint64_t hash, int filesize,
 		query1 = xmlrpc_struct_new(&env);
 		sublanguageid_xmlval = xmlrpc_string_new(&env, lang);
 		xmlrpc_struct_set_value(&env, query1, "sublanguageid", sublanguageid_xmlval);
-		sprintf(hash_str, "%" PRIx64, hash);
+		asprintf(&hash_str, "%" PRIx64, hash);
 		hash_xmlval = xmlrpc_string_new(&env, hash_str);
 		xmlrpc_struct_set_value(&env, query1, "moviehash", hash_xmlval);
 
-		sprintf(filesize_str, "%i", filesize);
+		asprintf(&filesize_str, "%i", filesize);
 		filesize_xmlval = xmlrpc_string_new(&env, filesize_str);
 		xmlrpc_struct_set_value(&env, query1, "moviebytesize", filesize_xmlval);
 		xmlrpc_array_append_item(&env, query_array, query1);
