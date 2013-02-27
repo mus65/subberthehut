@@ -137,7 +137,6 @@ static int search_get_results(const char *token, uint64_t hash, int filesize,
 	query_array = xmlrpc_array_new(&env);
 
 	// create hash-based query
-
 	if (!name_search_only) {
 		query1 = xmlrpc_struct_new(&env);
 		sublanguageid_xmlval = xmlrpc_string_new(&env, lang);
@@ -394,11 +393,11 @@ static int sub_download(const char *token, int sub_id, const char *file_path)
 	}
 	int b64_state = 0;
 	unsigned int b64_save = 0;
-	unsigned int offset = 0;
+	unsigned int b64_offset = 0;
 	do {
 		// write decoded data to z_in
-		z_strm.avail_in = g_base64_decode_step(&sub_base64[offset], ZLIB_CHUNK, z_in, &b64_state, &b64_save);
-		offset = z_strm.avail_in * 4/3; //  base64 encodes 3 bytes in 4 chars
+		z_strm.avail_in = g_base64_decode_step(&sub_base64[b64_offset], ZLIB_CHUNK, z_in, &b64_state, &b64_save);
+		b64_offset = z_strm.avail_in * 4/3; //  base64 encodes 3 bytes in 4 chars
 		if (z_strm.avail_in == 0)
 			break;
 
