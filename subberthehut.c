@@ -436,26 +436,26 @@ finish:
 }
 
 static void show_usage() {
-	printf("usage: subberthehut [options] <file>\n\n");
+	puts("Usage: subberthehut [options] <file>\n\n"
 
-	puts("OpenSubtitles.org downloader.\n");
+	     "OpenSubtitles.org downloader.\n\n"
 
-	printf("subberthehut can do a hash-based and a name-based search.\n"
-	       "On a hash-based search, subberthehut will generate a hash from the specified\n"
-	       "video file and use this to search for appropriate subtitles.\n"
-	       "Any results from this hash-based search are definitively compatible\n"
-	       "with the video file, therefore subberthehut will, by default, automatically\n"
-	       "download the first subtitle from these search results.\n"
-	       "In case the hash-based search returns no results, subberthehut will also\n"
-	       "do a name-based search, meaning the OpenSubtitles.org database\n"
-	       "will be searched with the filename of the specified file. The results\n"
-	       "from this search are not guaranteed to be compatible with the video\n"
-	       "file, therefore subberthehut will, by default, ask the user which subtitle to\n"
-	       "download.\n"
-	       "Results from the hash-based search are marked with an asterisk (*)\n"
-	       "in the 'H' column.\n\n");
+	     "subberthehut can do a hash-based and a name-based search.\n"
+	     "On a hash-based search, subberthehut will generate a hash from the specified\n"
+	     "video file and use this to search for appropriate subtitles.\n"
+	     "Any results from this hash-based search are definitively compatible\n"
+	     "with the video file, therefore subberthehut will, by default, automatically\n"
+	     "download the first subtitle from these search results.\n"
+	     "In case the hash-based search returns no results, subberthehut will also\n"
+	     "do a name-based search, meaning the OpenSubtitles.org database\n"
+	     "will be searched with the filename of the specified file. The results\n"
+	     "from this search are not guaranteed to be compatible with the video\n"
+	     "file, therefore subberthehut will, by default, ask the user which subtitle to\n"
+	     "download.\n"
+	     "Results from the hash-based search are marked with an asterisk (*)\n"
+	     "in the 'H' column.\n\n"
 
-	puts("Options:\n"
+	     "Options:\n"
 	     " -h, --help              Show help and exit.\n"
 	     " -v, --version           Show version information and exit.\n"
 	     " -l, --lang <languages>  Comma-separated list of languages to search for,\n"
@@ -475,8 +475,8 @@ static void show_usage() {
 }
 
 static void show_version() {
-	puts("subberthehut " VERSION);	
-	puts("https://github.com/65kid/subberthehut/");
+	puts("subberthehut " VERSION "\n"
+	     "https://github.com/65kid/subberthehut/");
 }
 
 static const char *get_sub_path(const char *filepath, const char *sub_filename) {
