@@ -13,12 +13,11 @@
 #include <glib.h> // g_base64_decode_step
 #include <zlib.h>
 
-#define NAME                   "subberthehut"
 #define VERSION                "3"
 
 #define XMLRPC_URL             "http://api.opensubtitles.org/xml-rpc"
 #define LOGIN_LANGCODE         "en"
-#define LOGIN_USER_AGENT       NAME
+#define LOGIN_USER_AGENT       "subberthehut"
 
 #define ZLIB_CHUNK             (64 * 1024)
 
@@ -37,19 +36,16 @@
 #define _cleanup_fclose_         __attribute__((cleanup(cleanup_fclose)))
 #define _cleanup_xmlrpc_DECREF_  __attribute__((cleanup(cleanup_xmlrpc_DECREF)))
 
-static void cleanup_free(void *p)
-{
+static void cleanup_free(void *p) {
 	free(*(void**)p);
 }
 
-static void cleanup_fclose(FILE **p)
-{
+static void cleanup_fclose(FILE **p) {
 	if(*p)
 		fclose(*p);
 }
 
-static void cleanup_xmlrpc_DECREF(xmlrpc_value **p)
-{
+static void cleanup_xmlrpc_DECREF(xmlrpc_value **p) {
 	if(*p)
 		xmlrpc_DECREF(*p);
 }
@@ -77,8 +73,7 @@ static int log_oom() {
  * copied and modified from:
  * http://trac.opensubtitles.org/projects/opensubtitles/wiki/HashSourceCodes
  */
-static uint64_t compute_hash(FILE *handle)
-{
+static uint64_t compute_hash(FILE *handle) {
 	uint64_t hash, fsize, tmp, i;
 
 	fseek(handle, 0, SEEK_END);
@@ -94,8 +89,7 @@ static uint64_t compute_hash(FILE *handle)
 	return hash;
 }
 
-static int login(const char **token)
-{
+static int login(const char **token) {
 	_cleanup_xmlrpc_DECREF_ xmlrpc_value *result = NULL;
 	_cleanup_xmlrpc_DECREF_ xmlrpc_value *token_xmlval = NULL;
 
@@ -114,8 +108,7 @@ static int login(const char **token)
 /*
  * convenience function the get a string value from a xmlrpc struct.
  */
-static const char *struct_get_string(xmlrpc_value *s, const char *key)
-{
+static const char *struct_get_string(xmlrpc_value *s, const char *key) {
 	_cleanup_xmlrpc_DECREF_ xmlrpc_value *xmlval = NULL;
 	const char *str;
 
@@ -126,8 +119,7 @@ static const char *struct_get_string(xmlrpc_value *s, const char *key)
 }
 
 static int search_get_results(const char *token, uint64_t hash, int filesize,
-                              const char *lang, const char *filename, xmlrpc_value **data)
-{
+                              const char *lang, const char *filename, xmlrpc_value **data) {
 	_cleanup_xmlrpc_DECREF_ xmlrpc_value *query1 = NULL;	// hash-based query
 	_cleanup_xmlrpc_DECREF_ xmlrpc_value *sublanguageid_xmlval = NULL;
 	_cleanup_xmlrpc_DECREF_ xmlrpc_value *hash_xmlval = NULL;
@@ -192,8 +184,7 @@ static int search_get_results(const char *token, uint64_t hash, int filesize,
 	return 0;
 }
 
-static void print_separator(int c, int digit_count)
-{
+static void print_separator(int c, int digit_count) {
 	for (int i = 0; i < c; i++) {
 		if (i == digit_count + 1 ||
 		    i == digit_count + 1 + 4 || 
@@ -207,8 +198,7 @@ static void print_separator(int c, int digit_count)
 	putchar('\n');
 }
 
-static int choose_from_results(xmlrpc_value *results, int *sub_id, const char **sub_filename)
-{
+static int choose_from_results(xmlrpc_value *results, int *sub_id, const char **sub_filename) {
 	struct sub_info {
 		int id;
 		bool matched_by_hash;
@@ -339,8 +329,7 @@ static int choose_from_results(xmlrpc_value *results, int *sub_id, const char **
 	return 0;
 }
 
-static int sub_download(const char *token, int sub_id, const char *file_path)
-{
+static int sub_download(const char *token, int sub_id, const char *file_path) {
 	_cleanup_xmlrpc_DECREF_ xmlrpc_value *sub_id_xmlval = NULL;
 	_cleanup_xmlrpc_DECREF_ xmlrpc_value *query_array = NULL;
 	_cleanup_xmlrpc_DECREF_ xmlrpc_value *result = NULL;;
@@ -446,37 +435,36 @@ finish:
 	return r;
 }
 
-static void usage()
-{
-	printf("usage: %s [options] <file>\n\n", NAME);
+static void show_usage() {
+	printf("usage: subberthehut [options] <file>\n\n");
 
 	puts("OpenSubtitles.org downloader.\n");
 
-	printf("%s can do a hash-based and a fulltext-based search.\n"
-	       "On a hash-based search, %s will generate a hash from the specified\n"
+	printf("subberthehut can do a hash-based and a name-based search.\n"
+	       "On a hash-based search, subberthehut will generate a hash from the specified\n"
 	       "video file and use this to search for appropriate subtitles.\n"
 	       "Any results from this hash-based search are definitively compatible\n"
-	       "with the video file, therefore %s will, by default, automatically\n"
+	       "with the video file, therefore subberthehut will, by default, automatically\n"
 	       "download the first subtitle from these search results.\n"
-	       "In case the hash-based search returns no results, %s will also\n"
-	       "do a fulltext-based search, meaning the OpenSubtitles.org database\n"
+	       "In case the hash-based search returns no results, subberthehut will also\n"
+	       "do a name-based search, meaning the OpenSubtitles.org database\n"
 	       "will be searched with the filename of the specified file. The results\n"
 	       "from this search are not guaranteed to be compatible with the video\n"
-	       "file, therefore %s will, by default, ask the user which subtitle to\n"
+	       "file, therefore subberthehut will, by default, ask the user which subtitle to\n"
 	       "download.\n"
 	       "Results from the hash-based search are marked with an asterisk (*)\n"
-	       "in the 'H' column.\n\n",
-	       NAME, NAME, NAME, NAME, NAME);
+	       "in the 'H' column.\n\n");
 
 	puts("Options:\n"
-	     " -h, --help              Display help and exit.\n"
+	     " -h, --help              Show help and exit.\n"
+	     " -v, --version           Show version information and exit.\n"
 	     " -l, --lang <languages>  Comma-separated list of languages to search for,\n"
 	     "                         e.g. 'eng,ger'. Use 'all' to search for all\n"
 	     "                         languages. Default is 'eng'.\n"
 	     " -a, --always-ask        Always ask which subtitle to download, even\n"
 	     "                         when there are hash-based results.\n"
 	     " -n, --never-ask         Never ask which subtitle to download, even\n"
-	     "                         when there are only filename based results.\n"
+	     "                         when there are only name-based results.\n"
 	     "                         When this option is specified, the first\n"
 	     "                         search result will be downloaded.\n"
 	     " -f, --force             Overwrite output file if it already exists.\n"
@@ -486,8 +474,12 @@ static void usage()
 	     "                         original file, only replacing the file extension.\n");
 }
 
-static const char *get_sub_path(const char *filepath, const char *sub_filename)
-{
+static void show_version() {
+	puts("subberthehut " VERSION);	
+	puts("https://github.com/65kid/subberthehut/");
+}
+
+static const char *get_sub_path(const char *filepath, const char *sub_filename) {
 	char *sub_filepath;
 
 	if (same_name) {
@@ -531,8 +523,7 @@ static const char *get_sub_path(const char *filepath, const char *sub_filename)
 	return sub_filepath;
 }
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
 	const char *filepath = NULL; // no cleanup because it will point to argv
 	_cleanup_free_ const char *token = NULL;
 
@@ -556,14 +547,15 @@ int main(int argc, char *argv[])
 		{"force", no_argument, NULL, 'f'},
 		{"hash-search-only", no_argument, NULL, 'o'},
 		{"name-search-only", no_argument, NULL, 'O'},
-		{"same-name", no_argument, NULL, 's'}
+		{"same-name", no_argument, NULL, 's'},
+		{"version", no_argument, NULL, 'v'}
 	};
 
 	int c;
-	while ((c = getopt_long(argc, argv, "hl:anfoOs", opts, NULL)) != -1) {
+	while ((c = getopt_long(argc, argv, "hl:anfoOsv", opts, NULL)) != -1) {
 		switch (c) {
 		case 'h':
-			usage();
+			show_usage();
 			return EXIT_SUCCESS;
 
 		case 'l':
@@ -596,6 +588,10 @@ int main(int argc, char *argv[])
 			same_name = true;
 			break;
 
+		case 'v':
+			show_version();
+			return EXIT_SUCCESS;
+
 		default:
 			return EXIT_FAILURE;
 		}
@@ -603,7 +599,7 @@ int main(int argc, char *argv[])
 
 	// check if user has specified exactly one file
 	if (argc - optind != 1) {
-		usage();
+		show_usage();
 		return EXIT_FAILURE;
 	}
 	// get hash/filesize
@@ -626,7 +622,7 @@ int main(int argc, char *argv[])
 	xmlrpc_env_init(&env);
 	xmlrpc_client_setup_global_const(&env);
 
-	xmlrpc_client_create(&env, XMLRPC_CLIENT_NO_FLAGS, NAME, VERSION, NULL, 0, &client);
+	xmlrpc_client_create(&env, XMLRPC_CLIENT_NO_FLAGS, "subberthehut", VERSION, NULL, 0, &client);
 	if (env.fault_occurred) {
 		fprintf(stderr, "failed to init xmlrpc client: %s (%d)\n", env.fault_string, env.fault_code);
 		r = env.fault_code;
