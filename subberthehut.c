@@ -14,7 +14,7 @@
 #include <zlib.h>
 
 #define NAME                   "subberthehut"
-#define VERSION                "2"
+#define VERSION                "3"
 
 #define XMLRPC_URL             "http://api.opensubtitles.org/xml-rpc"
 #define LOGIN_LANGCODE         "en"
