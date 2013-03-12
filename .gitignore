@@ -2,3 +2,7 @@
 subberthehut
 *.swp
 *.o
+.vimsession
+*.srt
+*.mkv
+*.mp4
