@@ -31,3 +31,5 @@ dist:
 	cp $(DISTFILES) subberthehut-$(VERSION)
 	tar czf subberthehut-$(VERSION).tar.gz subberthehut-$(VERSION)
 	rm -rf subberthehut-$(VERSION)
+
+.PHONY: install uninstall clean dist
