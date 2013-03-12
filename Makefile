@@ -1,4 +1,4 @@
-VERSION   = $(shell git describe)
+VERSION   = 4
 
 DISTFILES = Makefile subberthehut.c
 
@@ -9,6 +9,7 @@ CC      = gcc -std=gnu99
 CFLAGS := -Wall -Wextra -pedantic -O2 \
           $(shell xmlrpc-c-config client --cflags) \
           $(shell pkg-config --cflags glib-2.0 zlib) \
+	  -DVERSION=\"$(VERSION)\" \
           $(CFLAGS)
 
 LDLIBS  = $(shell xmlrpc-c-config client --libs) \
