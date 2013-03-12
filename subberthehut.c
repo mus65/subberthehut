@@ -64,7 +64,7 @@ static bool name_search_only = false;
 static bool same_name = false;
 
 static int log_oom() {
-	fputs("Out of memory.", stderr);
+	fputs("Out of memory.\n", stderr);
 	return ENOMEM;
 }
 

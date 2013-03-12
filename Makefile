@@ -2,6 +2,8 @@ VERSION   = $(shell git describe)
 
 DISTFILES = Makefile subberthehut.c
 
+PREFIX ?= /usr/local
+
 CC      = gcc -std=gnu99
 
 CFLAGS := -Wall -Wextra -pedantic -O2 \
@@ -15,10 +17,10 @@ LDLIBS  = $(shell xmlrpc-c-config client --libs) \
 subberthehut: subberthehut.o
 
 install: subberthehut
-	install -D -m 755 subberthehut $(DESTDIR)/usr/bin/subberthehut
+	install -D -m 755 subberthehut $(DESTDIR)$(PREFIX)/bin/subberthehut
 
 uninstall:
-	$(RM) $(DESTDIR)/usr/bin/subberthehut
+	$(RM) $(DESTDIR)$(PREFIX)/bin/subberthehut
 
 clean:
 	$(RM) subberthehut subberthehut.o subberthehut-$(VERSION).tar.gz
