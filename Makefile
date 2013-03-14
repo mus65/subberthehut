@@ -6,7 +6,7 @@ PREFIX ?= /usr/local
 
 CC      = gcc -std=gnu99
 
-CFLAGS := -Wall -Wextra -pedantic -O2 \
+CFLAGS := -Wall -Wextra -pedantic -O2 -D_FORTIFY_SOURCE=2 \
           $(shell xmlrpc-c-config client --cflags) \
           $(shell pkg-config --cflags glib-2.0 zlib) \
           -DVERSION=\"$(VERSION)\" \
