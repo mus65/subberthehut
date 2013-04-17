@@ -72,7 +72,7 @@ static int log_oom() {
  * http://trac.opensubtitles.org/projects/opensubtitles/wiki/HashSourceCodes
  */
 static uint64_t compute_hash(FILE *handle) {
-	uint64_t hash, fsize, tmp, i;
+	uint64_t hash, fsize;
 
 	fseek(handle, 0, SEEK_END);
 	fsize = ftell(handle);
@@ -80,9 +80,9 @@ static uint64_t compute_hash(FILE *handle) {
 
 	hash = fsize;
 
-	for (tmp = 0, i = 0; i < 65536 / sizeof(tmp) && fread((char *) &tmp, sizeof(tmp), 1, handle); hash += tmp, i++);
+	for (uint64_t tmp = 0, i = 0; i < 65536 / sizeof(tmp) && fread((char *) &tmp, sizeof(tmp), 1, handle); hash += tmp, i++);
 	fseek(handle, (fsize - 65536) > 0 ? (fsize - 65536) : 0, SEEK_SET);
-	for (tmp = 0, i = 0; i < 65536 / sizeof(tmp) && fread((char *) &tmp, sizeof(tmp), 1, handle); hash += tmp, i++);
+	for (uint64_t tmp = 0, i = 0; i < 65536 / sizeof(tmp) && fread((char *) &tmp, sizeof(tmp), 1, handle); hash += tmp, i++);
 
 	return hash;
 }
