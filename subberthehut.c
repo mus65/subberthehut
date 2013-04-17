@@ -307,10 +307,9 @@ static int choose_from_results(xmlrpc_value *results, int *sub_id, const char **
 			do {
 				printf("Choose subtitle [1..%i]: ", n);
 				int r = getline(&line, &len, stdin);
-				if (r == -1) {
-					fputs("failed to read line\n", stderr);
+				if (r == -1)
 					return 1;
-				}
+				
 				sel = strtol(line, &endptr, 10);
 			} while (*endptr != '\n' || sel < 1 || sel > n);
 		}
