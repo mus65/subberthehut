@@ -30,9 +30,9 @@
 #define SEP_UP_RIGHT           "\342\224\224"
 
 /* __attribute__(cleanup) */
-#define _cleanup_free_           __attribute__((cleanup(cleanup_free)))
-#define _cleanup_fclose_         __attribute__((cleanup(cleanup_fclose)))
-#define _cleanup_xmlrpc_DECREF_  __attribute__((cleanup(cleanup_xmlrpc_DECREF)))
+#define _cleanup_free_    __attribute__((cleanup(cleanup_free)))
+#define _cleanup_fclose_  __attribute__((cleanup(cleanup_fclose)))
+#define _cleanup_xmlrpc_  __attribute__((cleanup(cleanup_xmlrpc_DECREF)))
 
 static void cleanup_free(void *p) {
 	free(*(void**)p);
@@ -88,8 +88,8 @@ static uint64_t compute_hash(FILE *handle) {
 }
 
 static int login(const char **token) {
-	_cleanup_xmlrpc_DECREF_ xmlrpc_value *result = NULL;
-	_cleanup_xmlrpc_DECREF_ xmlrpc_value *token_xmlval = NULL;
+	_cleanup_xmlrpc_ xmlrpc_value *result = NULL;
+	_cleanup_xmlrpc_ xmlrpc_value *token_xmlval = NULL;
 
 	xmlrpc_client_call2f(&env, client, XMLRPC_URL, "LogIn", &result, "(ssss)", "", "", LOGIN_LANGCODE, LOGIN_USER_AGENT);
 	if (env.fault_occurred) {
@@ -107,7 +107,7 @@ static int login(const char **token) {
  * convenience function the get a string value from a xmlrpc struct.
  */
 static const char *struct_get_string(xmlrpc_value *s, const char *key) {
-	_cleanup_xmlrpc_DECREF_ xmlrpc_value *xmlval = NULL;
+	_cleanup_xmlrpc_ xmlrpc_value *xmlval = NULL;
 	const char *str;
 
 	xmlrpc_struct_find_value(&env, s, key, &xmlval);
@@ -118,18 +118,18 @@ static const char *struct_get_string(xmlrpc_value *s, const char *key) {
 
 static int search_get_results(const char *token, uint64_t hash, int filesize,
                               const char *lang, const char *filename, xmlrpc_value **data) {
-	_cleanup_xmlrpc_DECREF_ xmlrpc_value *query1 = NULL;	// hash-based query
-	_cleanup_xmlrpc_DECREF_ xmlrpc_value *sublanguageid_xmlval = NULL;
-	_cleanup_xmlrpc_DECREF_ xmlrpc_value *hash_xmlval = NULL;
-	_cleanup_xmlrpc_DECREF_ xmlrpc_value *filesize_xmlval = NULL;
+	_cleanup_xmlrpc_ xmlrpc_value *query1 = NULL;	// hash-based query
+	_cleanup_xmlrpc_ xmlrpc_value *sublanguageid_xmlval = NULL;
+	_cleanup_xmlrpc_ xmlrpc_value *hash_xmlval = NULL;
+	_cleanup_xmlrpc_ xmlrpc_value *filesize_xmlval = NULL;
 	_cleanup_free_ char *hash_str = NULL;
 	_cleanup_free_ char *filesize_str = NULL;
 
-	_cleanup_xmlrpc_DECREF_ xmlrpc_value *query2 = NULL;	// full-text query
-	_cleanup_xmlrpc_DECREF_ xmlrpc_value *filename_xmlval = NULL;
+	_cleanup_xmlrpc_ xmlrpc_value *query2 = NULL;	// full-text query
+	_cleanup_xmlrpc_ xmlrpc_value *filename_xmlval = NULL;
 
-	_cleanup_xmlrpc_DECREF_ xmlrpc_value *query_array = NULL;
-	_cleanup_xmlrpc_DECREF_ xmlrpc_value *result = NULL;
+	_cleanup_xmlrpc_ xmlrpc_value *query_array = NULL;
+	_cleanup_xmlrpc_ xmlrpc_value *result = NULL;
 
 	query_array = xmlrpc_array_new(&env);
 
@@ -237,7 +237,7 @@ static int choose_from_results(xmlrpc_value *results, int *sub_id, const char **
 	}
 
 	for (int i = 0; i < n; i++) {
-		_cleanup_xmlrpc_DECREF_ xmlrpc_value *oneresult = NULL;
+		_cleanup_xmlrpc_ xmlrpc_value *oneresult = NULL;
 		xmlrpc_array_read_item(&env, results, i, &oneresult);
 
 		// dear OpenSubtitles.org, why are these IDs provided as strings?
@@ -331,13 +331,13 @@ static int choose_from_results(xmlrpc_value *results, int *sub_id, const char **
 }
 
 static int sub_download(const char *token, int sub_id, const char *file_path) {
-	_cleanup_xmlrpc_DECREF_ xmlrpc_value *sub_id_xmlval = NULL;
-	_cleanup_xmlrpc_DECREF_ xmlrpc_value *query_array = NULL;
-	_cleanup_xmlrpc_DECREF_ xmlrpc_value *result = NULL;;
+	_cleanup_xmlrpc_ xmlrpc_value *sub_id_xmlval = NULL;
+	_cleanup_xmlrpc_ xmlrpc_value *query_array = NULL;
+	_cleanup_xmlrpc_ xmlrpc_value *result = NULL;;
 
-	_cleanup_xmlrpc_DECREF_ xmlrpc_value *data = NULL;       // result -> data
-	_cleanup_xmlrpc_DECREF_ xmlrpc_value *data_0 = NULL;     // result -> data[0]
-	_cleanup_xmlrpc_DECREF_ xmlrpc_value *data_0_sub = NULL; // result -> data[0][data]
+	_cleanup_xmlrpc_ xmlrpc_value *data = NULL;       // result -> data
+	_cleanup_xmlrpc_ xmlrpc_value *data_0 = NULL;     // result -> data[0]
+	_cleanup_xmlrpc_ xmlrpc_value *data_0_sub = NULL; // result -> data[0][data]
 
 	_cleanup_free_ const char *sub_base64 = NULL;	  // the subtitle, gzipped and base64 encoded
 
@@ -532,7 +532,7 @@ int main(int argc, char *argv[]) {
 	uint64_t hash = 0;
 	int filesize = 0;
 
-	_cleanup_xmlrpc_DECREF_ xmlrpc_value *results = NULL;
+	_cleanup_xmlrpc_ xmlrpc_value *results = NULL;
 
 	_cleanup_free_ const char *sub_filename = NULL;
 	_cleanup_free_ const char *sub_filepath = NULL;
