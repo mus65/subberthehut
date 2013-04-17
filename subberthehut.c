@@ -215,17 +215,8 @@ static int choose_from_results(xmlrpc_value *results, int *sub_id, const char **
 
 	int sel = 0; // selected list item
 
-	/*
-	 * In order to properly align the table later, we
-	 * need the length of the longest release_name and
-	 * filename and the number of digits of n.
-	 * Everything else is of fixed length.
-	 *
-	 * For the rare case that the longest release_name
-	 * or filename is smaller than the header string,
-	 * set them to the length of the header string
-	 * initially, otherwise the output gets screwed up.
-	 */
+	/* Make the values in the "Release / File Name" column
+	 * at least as long as the header title itself. */
 	int align_release_name = strlen(HEADER_RELEASE_NAME);
 
 	// count number of digits
