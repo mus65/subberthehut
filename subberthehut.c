@@ -71,20 +71,16 @@ static int log_oom() {
  * copied and modified from:
  * http://trac.opensubtitles.org/projects/opensubtitles/wiki/HashSourceCodes
  */
-static uint64_t compute_hash(FILE *handle) {
-	uint64_t hash, fsize;
-
+static void get_hash_and_filesize(FILE *handle, uint64_t *hash, uint64_t *filesize) {
 	fseek(handle, 0, SEEK_END);
-	fsize = ftell(handle);
+	*filesize = ftell(handle);
 	fseek(handle, 0, SEEK_SET);
 
-	hash = fsize;
+	*hash = *filesize;
 
-	for (uint64_t tmp = 0, i = 0; i < 65536 / sizeof(tmp) && fread((char *) &tmp, sizeof(tmp), 1, handle); hash += tmp, i++);
-	fseek(handle, (fsize - 65536) > 0 ? (fsize - 65536) : 0, SEEK_SET);
-	for (uint64_t tmp = 0, i = 0; i < 65536 / sizeof(tmp) && fread((char *) &tmp, sizeof(tmp), 1, handle); hash += tmp, i++);
-
-	return hash;
+	for (uint64_t tmp = 0, i = 0; i < 65536 / sizeof(tmp) && fread((char *) &tmp, sizeof(tmp), 1, handle); *hash += tmp, i++);
+	fseek(handle, (*filesize - 65536) > 0 ? (*filesize - 65536) : 0, SEEK_SET);
+	for (uint64_t tmp = 0, i = 0; i < 65536 / sizeof(tmp) && fread((char *) &tmp, sizeof(tmp), 1, handle); *hash += tmp, i++);
 }
 
 static int login(const char **token) {
@@ -520,8 +516,7 @@ int main(int argc, char *argv[]) {
 	_cleanup_free_ const char *token = NULL;
 
 	_cleanup_fclose_ FILE *f = NULL;
-	uint64_t hash = 0;
-	int filesize = 0;
+	uint64_t hash = 0, filesize = 0;
 
 	_cleanup_xmlrpc_ xmlrpc_value *results = NULL;
 
@@ -604,10 +599,7 @@ int main(int argc, char *argv[]) {
 			return errno;
 		}
 
-		hash = compute_hash(f);
-
-		fseek(f, 0, SEEK_END);
-		filesize = ftell(f);
+		get_hash_and_filesize(f, &hash, &filesize);
 	}
 
 	// xmlrpc init
