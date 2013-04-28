@@ -1,4 +1,4 @@
-VERSION   = 4
+VERSION   = 6
 
 DISTFILES = Makefile subberthehut.c
 
