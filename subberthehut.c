@@ -13,11 +13,13 @@
 #include <glib.h> // g_base64_decode_step
 #include <zlib.h>
 
-#define XMLRPC_URL             "http://api.opensubtitles.org/xml-rpc"
+#define STH_XMLRPC_URL         "http://api.opensubtitles.org/xml-rpc"
 #define LOGIN_LANGCODE         "en"
 #define LOGIN_USER_AGENT       "subberthehut"
 
 #define ZLIB_CHUNK             (64 * 1024)
+
+#define STH_XMLRPC_SIZE_LIMIT  (10 * 1024 * 1024)
 
 #define HEADER_ID              '#'
 #define HEADER_MATCHED_BY_HASH 'H'
@@ -87,7 +89,7 @@ static int login(const char **token) {
 	_cleanup_xmlrpc_ xmlrpc_value *result = NULL;
 	_cleanup_xmlrpc_ xmlrpc_value *token_xmlval = NULL;
 
-	xmlrpc_client_call2f(&env, client, XMLRPC_URL, "LogIn", &result, "(ssss)", "", "", LOGIN_LANGCODE, LOGIN_USER_AGENT);
+	xmlrpc_client_call2f(&env, client, STH_XMLRPC_URL, "LogIn", &result, "(ssss)", "", "", LOGIN_LANGCODE, LOGIN_USER_AGENT);
 	if (env.fault_occurred) {
 		fprintf(stderr, "login failed: %s (%d)\n", env.fault_string, env.fault_code);
 		return env.fault_code;
@@ -163,7 +165,7 @@ static int search_get_results(const char *token, uint64_t hash, int filesize,
 		xmlrpc_array_append_item(&env, query_array, query2);
 	}
 
-	xmlrpc_client_call2f(&env, client, XMLRPC_URL, "SearchSubtitles", &result, "(sA)", token, query_array);
+	xmlrpc_client_call2f(&env, client, STH_XMLRPC_URL, "SearchSubtitles", &result, "(sA)", token, query_array);
 	if (env.fault_occurred) {
 		fprintf(stderr, "query failed: %s (%d)\n", env.fault_string, env.fault_code);
 		return env.fault_code;
@@ -358,7 +360,7 @@ static int sub_download(const char *token, int sub_id, const char *file_path) {
 	query_array = xmlrpc_array_new(&env);
 	xmlrpc_array_append_item(&env, query_array, sub_id_xmlval);
 
-	xmlrpc_client_call2f(&env, client, XMLRPC_URL, "DownloadSubtitles", &result, "(sA)", token, query_array);
+	xmlrpc_client_call2f(&env, client, STH_XMLRPC_URL, "DownloadSubtitles", &result, "(sA)", token, query_array);
 	if (env.fault_occurred) {
 		fprintf(stderr, "query failed: %s (%d)\n", env.fault_string, env.fault_code);
 		return env.fault_code;
@@ -606,6 +608,8 @@ int main(int argc, char *argv[]) {
 	// xmlrpc init
 	xmlrpc_env_init(&env);
 	xmlrpc_client_setup_global_const(&env);
+	// make sure the library doesn't complain about too much data
+	xmlrpc_limit_set(XMLRPC_XML_SIZE_LIMIT_ID, STH_XMLRPC_SIZE_LIMIT);
 
 	xmlrpc_client_create(&env, XMLRPC_CLIENT_NO_FLAGS, "subberthehut", VERSION, NULL, 0, &client);
 	if (env.fault_occurred) {
