@@ -22,12 +22,6 @@ uninstall:
 	$(RM) $(DESTDIR)$(PREFIX)/bin/subberthehut
 
 clean:
-	$(RM) subberthehut subberthehut.o subberthehut-$(VERSION).tar.gz
+	$(RM) subberthehut subberthehut.o
 
-dist:
-	mkdir subberthehut-$(VERSION)
-	cp $(DISTFILES) subberthehut-$(VERSION)
-	tar czf subberthehut-$(VERSION).tar.gz subberthehut-$(VERSION)
-	rm -rf subberthehut-$(VERSION)
-
-.PHONY: install uninstall clean dist
+.PHONY: install uninstall clean
