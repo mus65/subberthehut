@@ -62,6 +62,7 @@ static bool never_ask = false;
 static bool hash_search_only = false;
 static bool name_search_only = false;
 static bool same_name = false;
+static int quiet = 0;
 
 static int log_oom() {
 	fputs("Out of memory.\n", stderr);
@@ -217,14 +218,6 @@ static int choose_from_results(xmlrpc_value *results, int *sub_id, const char **
 	 * at least as long as the header title itself. */
 	int align_release_name = strlen(HEADER_RELEASE_NAME);
 
-	// count number of digits
-	int digit_count = 0;
-	int n_tmp = n;
-	while (n_tmp) {
-		n_tmp /= 10;
-		digit_count++;
-	}
-
 	for (int i = 0; i < n; i++) {
 		_cleanup_xmlrpc_ xmlrpc_value *oneresult = NULL;
 		xmlrpc_array_read_item(&env, results, i, &oneresult);
@@ -249,6 +242,21 @@ static int choose_from_results(xmlrpc_value *results, int *sub_id, const char **
 		s = strlen(sub_infos[i].filename);
 		if (s > align_release_name)
 			align_release_name = s;
+	}
+
+	if (never_ask)
+		sel = 1;
+
+	// no need to print the table, let's skip it
+	if (quiet && sel != 0 && !always_ask)
+		goto finish;
+
+	// count number of digits
+	int digit_count = 0;
+	int n_tmp = n;
+	while (n_tmp) {
+		n_tmp /= 10;
+		digit_count++;
 	}
 
 	// header
@@ -287,23 +295,20 @@ static int choose_from_results(xmlrpc_value *results, int *sub_id, const char **
 	putchar('\n');
 
 	if (sel == 0 || always_ask) {
-		if (never_ask) {
-			sel = 1;
-		} else {
-			_cleanup_free_ char *line = NULL;
-			size_t len = 0;
-			char *endptr = NULL;
-			do {
-				printf("Choose subtitle [1..%i]: ", n);
-				int r = getline(&line, &len, stdin);
-				if (r == -1)
-					return 1;
-				
-				sel = strtol(line, &endptr, 10);
-			} while (*endptr != '\n' || sel < 1 || sel > n);
-		}
+		_cleanup_free_ char *line = NULL;
+		size_t len = 0;
+		char *endptr = NULL;
+		do {
+			printf("Choose subtitle [1..%i]: ", n);
+			int r = getline(&line, &len, stdin);
+			if (r == -1)
+				return 1;
+			
+			sel = strtol(line, &endptr, 10);
+		} while (*endptr != '\n' || sel < 1 || sel > n);
 	}
 
+finish:
 	*sub_id = sub_infos[sel - 1].id;
 	*sub_filename = strdup(sub_infos[sel - 1].filename);
 	if (*sub_filename == NULL)
@@ -462,7 +467,9 @@ static void show_usage() {
 	     " -O, --name-search-only  Only do a name-based search. This is useful in\n"
 	     "                         case of false positives from the hash-based search.\n"
 	     " -s, --same-name         Download the subtitle to the same filename as the\n"
-	     "                         original file, only replacing the file extension.\n");
+	     "                         original file, only replacing the file extension.\n"
+	     " -q, --quiet             Don't print the table if the user doesn't have to be\n"
+	     "                         asked which subtitle to download.\n");
 }
 
 static void show_version() {
@@ -538,11 +545,12 @@ int main(int argc, char *argv[]) {
 		{"hash-search-only", no_argument, NULL, 'o'},
 		{"name-search-only", no_argument, NULL, 'O'},
 		{"same-name", no_argument, NULL, 's'},
+		{"quiet", no_argument, NULL, 'q'},
 		{"version", no_argument, NULL, 'v'}
 	};
 
 	int c;
-	while ((c = getopt_long(argc, argv, "hl:anfoOsv", opts, NULL)) != -1) {
+	while ((c = getopt_long(argc, argv, "hl:anfoOsqv", opts, NULL)) != -1) {
 		switch (c) {
 		case 'h':
 			show_usage();
@@ -576,6 +584,10 @@ int main(int argc, char *argv[]) {
 
 		case 's':
 			same_name = true;
+			break;
+
+		case 'q':
+			quiet++;
 			break;
 
 		case 'v':
