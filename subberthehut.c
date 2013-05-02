@@ -64,8 +64,27 @@ static bool name_search_only = false;
 static bool same_name = false;
 static int quiet = 0;
 
+static void log_err(const char *format, ...) {
+	va_list args;
+	va_start(args, format);
+	vfprintf(stderr, format, args);
+	va_end(args);
+	putc('\n', stderr);
+}
+
+static void log_info(const char *format, ...) {
+	if (quiet >= 2)
+		return;
+
+	va_list args;
+	va_start(args, format);
+	vprintf(format, args);
+	va_end(args);
+	putc('\n', stdout);
+}
+
 static int log_oom() {
-	fputs("Out of memory.\n", stderr);
+	log_err("Out of Memory.");
 	return ENOMEM;
 }
 
@@ -92,7 +111,7 @@ static int login(const char **token) {
 
 	xmlrpc_client_call2f(&env, client, STH_XMLRPC_URL, "LogIn", &result, "(ssss)", "", "", LOGIN_LANGCODE, LOGIN_USER_AGENT);
 	if (env.fault_occurred) {
-		fprintf(stderr, "login failed: %s (%d)\n", env.fault_string, env.fault_code);
+		log_err("login failed: %s (%d)", env.fault_string, env.fault_code);
 		return env.fault_code;
 	}
 
@@ -168,13 +187,13 @@ static int search_get_results(const char *token, uint64_t hash, int filesize,
 
 	xmlrpc_client_call2f(&env, client, STH_XMLRPC_URL, "SearchSubtitles", &result, "(sA)", token, query_array);
 	if (env.fault_occurred) {
-		fprintf(stderr, "query failed: %s (%d)\n", env.fault_string, env.fault_code);
+		log_err("query failed: %s (%d)", env.fault_string, env.fault_code);
 		return env.fault_code;
 	}
 
 	xmlrpc_struct_read_value(&env, result, "data", data);
 	if (env.fault_occurred) {
-		fprintf(stderr, "failed to get data: %s (%d)\n", env.fault_string, env.fault_code);
+		log_err("failed to get data: %s (%d)", env.fault_string, env.fault_code);
 		return env.fault_code;
 	}
 
@@ -206,7 +225,7 @@ static int choose_from_results(xmlrpc_value *results, int *sub_id, const char **
 
 	int n = xmlrpc_array_size(&env, results);
 	if (env.fault_occurred) {
-		fprintf(stderr, "failed to get array size: %s (%d)\n", env.fault_string, env.fault_code);
+		log_err("failed to get array size: %s (%d)", env.fault_string, env.fault_code);
 		return env.fault_code;
 	}
 
@@ -352,9 +371,9 @@ static int sub_download(const char *token, int sub_id, const char *file_path) {
 	// check if file already exists
 	if (access(file_path, F_OK) == 0) {
 		if (force_overwrite) {
-			puts("file already exists, overwriting.");
+			log_info("file already exists, overwriting.");
 		} else {
-			fputs("file already exists, aborting. Use -f to force an overwrite.\n", stderr);
+			log_err("file already exists, aborting. Use -f to force an overwrite.");
 			return errno;
 		}
 	}
@@ -367,7 +386,7 @@ static int sub_download(const char *token, int sub_id, const char *file_path) {
 
 	xmlrpc_client_call2f(&env, client, STH_XMLRPC_URL, "DownloadSubtitles", &result, "(sA)", token, query_array);
 	if (env.fault_occurred) {
-		fprintf(stderr, "query failed: %s (%d)\n", env.fault_string, env.fault_code);
+		log_err("query failed: %s (%d)", env.fault_string, env.fault_code);
 		return env.fault_code;
 	}
 
@@ -387,7 +406,7 @@ static int sub_download(const char *token, int sub_id, const char *file_path) {
 	// 16+MAX_WBITS is needed for gzip support
 	z_ret = inflateInit2(&z_strm, 16 + MAX_WBITS);
 	if (z_ret != Z_OK) {
-		fprintf(stderr, "failed to init zlib (%i)\n", z_ret);
+		log_err("failed to init zlib (%i)", z_ret);
 		return z_ret;
 	}
 
@@ -415,7 +434,7 @@ static int sub_download(const char *token, int sub_id, const char *file_path) {
 			case Z_DATA_ERROR:
 			case Z_MEM_ERROR:
 				r = z_ret;
-				fprintf(stderr, "zlib error: %s (%d)\n", z_strm.msg, z_ret);
+				log_err("zlib error: %s (%d)", z_strm.msg, z_ret);
 				goto finish;
 			}
 			// write decompressed data from z_out to file
@@ -469,7 +488,8 @@ static void show_usage() {
 	     " -s, --same-name         Download the subtitle to the same filename as the\n"
 	     "                         original file, only replacing the file extension.\n"
 	     " -q, --quiet             Don't print the table if the user doesn't have to be\n"
-	     "                         asked which subtitle to download.\n");
+	     "                         asked which subtitle to download. Pass this option twice\n"
+	     "                         to suppress anything but warnings and error messages.\n");
 }
 
 static void show_version() {
@@ -483,8 +503,8 @@ static const char *get_sub_path(const char *filepath, const char *sub_filename) 
 	if (same_name) {
 		const char *sub_ext = strrchr(sub_filename, '.');
 		if (sub_ext == NULL) {
-			fputs("warning: subtitle filename from the OpenSubtitles.org "
-			      "database has no file extension, assuming .srt.\n", stderr);
+			log_err("warning: subtitle filename from the OpenSubtitles.org "
+			        "database has no file extension, assuming .srt.");
 			sub_ext = ".srt";
 		}
 		const char *lastdot = strrchr(filepath, '.');
@@ -626,7 +646,7 @@ int main(int argc, char *argv[]) {
 
 	xmlrpc_client_create(&env, XMLRPC_CLIENT_NO_FLAGS, "subberthehut", VERSION, NULL, 0, &client);
 	if (env.fault_occurred) {
-		fprintf(stderr, "failed to init xmlrpc client: %s (%d)\n", env.fault_string, env.fault_code);
+		log_err("failed to init xmlrpc client: %s (%d)", env.fault_string, env.fault_code);
 		r = env.fault_code;
 		goto finish;
 	}
@@ -636,7 +656,7 @@ int main(int argc, char *argv[]) {
 		goto finish;
 
 	// start search
-	puts("searching...");
+	log_info("searching...");
 
 	const char *filename = strrchr(filepath, '/');
 	if (filename == NULL)
@@ -648,7 +668,7 @@ int main(int argc, char *argv[]) {
 	}
 	// for some reason [data] is of type XMLRPC_TYPE_BOOL if the search returns no hits!?
 	if (xmlrpc_value_type(results) != XMLRPC_TYPE_ARRAY) {
-		puts("no results.");
+		log_err("no results.");
 		r = EXIT_FAILURE;
 		goto finish;
 	}
@@ -662,7 +682,7 @@ int main(int argc, char *argv[]) {
 	if (sub_filepath == NULL)
 		return log_oom();
 
-	printf("downloading to %s ...\n", sub_filepath);
+	log_info("downloading to %s ...", sub_filepath);
 	r = sub_download(token, sub_id, sub_filepath);
 
 finish:
