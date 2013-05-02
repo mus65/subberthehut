@@ -1,7 +1,5 @@
 VERSION   = 8
 
-DISTFILES = Makefile subberthehut.c
-
 PREFIX ?= /usr/local
 
 CFLAGS := -std=gnu99 -Wall -Wextra -pedantic -O2 -D_FORTIFY_SOURCE=2 \
