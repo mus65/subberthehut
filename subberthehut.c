@@ -62,7 +62,7 @@ static bool never_ask = false;
 static bool hash_search_only = false;
 static bool name_search_only = false;
 static bool same_name = false;
-static int quiet = 0;
+static unsigned int quiet = 0;
 
 static void log_err(const char *format, ...) {
 	va_list args;
@@ -80,7 +80,7 @@ static void log_info(const char *format, ...) {
 	va_start(args, format);
 	vprintf(format, args);
 	va_end(args);
-	putc('\n', stdout);
+	putchar('\n');
 }
 
 static int log_oom() {
