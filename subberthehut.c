@@ -546,7 +546,8 @@ int main(int argc, char *argv[]) {
 		{"name-search-only", no_argument, NULL, 'O'},
 		{"same-name", no_argument, NULL, 's'},
 		{"quiet", no_argument, NULL, 'q'},
-		{"version", no_argument, NULL, 'v'}
+		{"version", no_argument, NULL, 'v'},
+		{0, 0, 0, 0}
 	};
 
 	int c;
