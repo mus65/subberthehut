@@ -64,6 +64,14 @@ static bool name_search_only = false;
 static bool same_name = false;
 static unsigned int quiet = 0;
 
+struct sub_info {
+	int id;
+	bool matched_by_hash;
+	const char *lang;
+	const char *release_name;
+	const char *filename;
+};
+
 static void log_err(const char *format, ...) {
 	va_list args;
 	va_start(args, format);
@@ -214,62 +222,7 @@ static void print_separator(int c, int digit_count) {
 	putchar('\n');
 }
 
-static int choose_from_results(xmlrpc_value *results, int *sub_id, const char **sub_filename) {
-	struct sub_info {
-		int id;
-		bool matched_by_hash;
-		const char *lang;
-		const char *release_name;
-		const char *filename;
-	};
-
-	int n = xmlrpc_array_size(&env, results);
-	if (env.fault_occurred) {
-		log_err("failed to get array size: %s (%d)", env.fault_string, env.fault_code);
-		return env.fault_code;
-	}
-
-	struct sub_info sub_infos[n];
-
-	int sel = 0; // selected list item
-
-	/* Make the values in the "Release / File Name" column
-	 * at least as long as the header title itself. */
-	int align_release_name = strlen(HEADER_RELEASE_NAME);
-
-	for (int i = 0; i < n; i++) {
-		_cleanup_xmlrpc_ xmlrpc_value *oneresult = NULL;
-		xmlrpc_array_read_item(&env, results, i, &oneresult);
-
-		// dear OpenSubtitles.org, why are these IDs provided as strings?
-		_cleanup_free_ const char *sub_id_str = struct_get_string(oneresult, "IDSubtitleFile");
-		_cleanup_free_ const char *matched_by_str = struct_get_string(oneresult, "MatchedBy");
-
-		sub_infos[i].id = strtol(sub_id_str, NULL, 10);
-		sub_infos[i].matched_by_hash = strcmp(matched_by_str, "moviehash") == 0;
-		sub_infos[i].lang = struct_get_string(oneresult, "SubLanguageID");
-		sub_infos[i].release_name = struct_get_string(oneresult, "MovieReleaseName");
-		sub_infos[i].filename = struct_get_string(oneresult, "SubFileName");
-
-		if (sub_infos[i].matched_by_hash && sel == 0)
-			sel = i + 1;
-
-		int s = strlen(sub_infos[i].release_name);
-		if (s > align_release_name)
-			align_release_name = s;
-
-		s = strlen(sub_infos[i].filename);
-		if (s > align_release_name)
-			align_release_name = s;
-	}
-
-	if (never_ask)
-		sel = 1;
-
-	// no need to print the table, let's skip it
-	if (quiet && sel != 0 && !always_ask)
-		goto finish;
-
+static void print_table(struct sub_info *sub_infos, int n, int align_release_name) {
 	// count number of digits
 	int digit_count = 0;
 	int n_tmp = n;
@@ -312,27 +265,84 @@ static int choose_from_results(xmlrpc_value *results, int *sub_id, const char **
 			print_separator(c, digit_count);
 	}
 	putchar('\n');
+}
+
+static int choose_from_results(xmlrpc_value *results, int *sub_id, const char **sub_filename) {
+	int r = 0;
+
+	int n = xmlrpc_array_size(&env, results);
+	if (env.fault_occurred) {
+		log_err("failed to get array size: %s (%d)", env.fault_string, env.fault_code);
+		return env.fault_code;
+	}
+
+	struct sub_info sub_infos[n];
+
+	int sel = 0; // selected list item
+
+	/* Make the values in the "Release / File Name" column
+	 * at least as long as the header title itself. */
+	int align_release_name = strlen(HEADER_RELEASE_NAME);
+
+	for (int i = 0; i < n; i++) {
+		_cleanup_xmlrpc_ xmlrpc_value *oneresult = NULL;
+		xmlrpc_array_read_item(&env, results, i, &oneresult);
+
+		// dear OpenSubtitles.org, why are these IDs provided as strings?
+		_cleanup_free_ const char *sub_id_str = struct_get_string(oneresult, "IDSubtitleFile");
+		_cleanup_free_ const char *matched_by_str = struct_get_string(oneresult, "MatchedBy");
+
+		sub_infos[i].id = strtol(sub_id_str, NULL, 10);
+		sub_infos[i].matched_by_hash = strcmp(matched_by_str, "moviehash") == 0;
+		sub_infos[i].lang = struct_get_string(oneresult, "SubLanguageID");
+		sub_infos[i].release_name = struct_get_string(oneresult, "MovieReleaseName");
+		sub_infos[i].filename = struct_get_string(oneresult, "SubFileName");
+
+		// select first hash match if one exists
+		if (sub_infos[i].matched_by_hash && sel == 0)
+			sel = i + 1;
+
+		int s = strlen(sub_infos[i].release_name);
+		if (s > align_release_name)
+			align_release_name = s;
+
+		s = strlen(sub_infos[i].filename);
+		if (s > align_release_name)
+			align_release_name = s;
+	}
+
+	if (never_ask && sel == 0)
+		sel = 1;
 
 	if (sel == 0 || always_ask) {
+		print_table(sub_infos, n, align_release_name);
+
 		_cleanup_free_ char *line = NULL;
 		size_t len = 0;
 		char *endptr = NULL;
 		do {
 			printf("Choose subtitle [1..%i]: ", n);
-			int r = getline(&line, &len, stdin);
-			if (r == -1)
-				return 1;
+			if (getline(&line, &len, stdin) == -1) {
+				r = EIO;
+				goto finish;
+			}
 			
 			sel = strtol(line, &endptr, 10);
 		} while (*endptr != '\n' || sel < 1 || sel > n);
 	}
+	else if (!quiet) {
+		print_table(sub_infos, n, align_release_name);
+	}
 
-finish:
 	*sub_id = sub_infos[sel - 1].id;
 	*sub_filename = strdup(sub_infos[sel - 1].filename);
-	if (*sub_filename == NULL)
-		return log_oom();
 
+	if (*sub_filename == NULL) {
+		r = log_oom();
+		goto finish;
+	}
+
+finish:
 	// __attribute__(cleanup) can't be used in structs, let alone arrays
 	for (int i = 0; i < n; i++) {
 		free((void *)sub_infos[i].lang);
@@ -340,7 +350,7 @@ finish:
 		free((void *)sub_infos[i].filename);
 	}
 
-	return 0;
+	return r;
 }
 
 static int sub_download(const char *token, int sub_id, const char *file_path) {
@@ -374,7 +384,7 @@ static int sub_download(const char *token, int sub_id, const char *file_path) {
 			log_info("file already exists, overwriting.");
 		} else {
 			log_err("file already exists, aborting. Use -f to force an overwrite.");
-			return errno;
+			return EEXIST;
 		}
 	}
 
