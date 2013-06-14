@@ -1,4 +1,4 @@
-VERSION   = 8
+VERSION = 9
 
 PREFIX ?= /usr/local
 

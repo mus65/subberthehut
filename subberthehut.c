@@ -337,7 +337,7 @@ static int choose_from_results(xmlrpc_value *results, int *sub_id, const char **
 	*sub_id = sub_infos[sel - 1].id;
 	*sub_filename = strdup(sub_infos[sel - 1].filename);
 
-	if (*sub_filename == NULL) {
+	if (!*sub_filename) {
 		r = log_oom();
 		goto finish;
 	}
@@ -512,20 +512,20 @@ static const char *get_sub_path(const char *filepath, const char *sub_filename) 
 
 	if (same_name) {
 		const char *sub_ext = strrchr(sub_filename, '.');
-		if (sub_ext == NULL) {
+		if (!sub_ext) {
 			log_err("warning: subtitle filename from the OpenSubtitles.org "
 			        "database has no file extension, assuming .srt.");
 			sub_ext = ".srt";
 		}
 		const char *lastdot = strrchr(filepath, '.');
 		int index;
-		if (lastdot == NULL)
+		if (!lastdot)
 			index = strlen(filepath) - 1;
 		else
 			index = (lastdot - filepath);
 
 		sub_filepath = malloc(index + 1 + strlen(sub_ext) + 1);
-		if (sub_filepath == NULL)
+		if (!sub_filepath)
 			return NULL;
 
 		strncpy(sub_filepath, filepath, index);
@@ -533,14 +533,14 @@ static const char *get_sub_path(const char *filepath, const char *sub_filename) 
 		strcat(sub_filepath, sub_ext);
 	} else {
 		const char *lastslash = strrchr(filepath, '/');
-		if (lastslash == NULL) {
+		if (!lastslash) {
 			sub_filepath = strdup(sub_filename);
-			if (sub_filepath == NULL)
+			if (!sub_filepath)
 				return NULL;
 		} else {
 			int index = (lastslash - filepath);
 			sub_filepath = malloc(index + 1 + strlen(sub_filename) + 1);
-			if (sub_filepath == NULL)
+			if (!sub_filepath)
 				return NULL;
 
 			strncpy(sub_filepath, filepath, index + 1);
@@ -669,13 +669,13 @@ int main(int argc, char *argv[]) {
 	log_info("searching...");
 
 	const char *filename = strrchr(filepath, '/');
-	if (filename == NULL)
+	if (!filename)
 		filename = filepath;
 
 	r = search_get_results(token, hash, filesize, lang, filename, &results);
-	if (r != 0) {
+	if (r != 0)
 		goto finish;
-	}
+
 	// for some reason [data] is of type XMLRPC_TYPE_BOOL if the search returns no hits!?
 	if (xmlrpc_value_type(results) != XMLRPC_TYPE_ARRAY) {
 		log_err("no results.");
@@ -689,7 +689,7 @@ int main(int argc, char *argv[]) {
 		goto finish;
 
 	sub_filepath = get_sub_path(filepath, sub_filename);
-	if (sub_filepath == NULL)
+	if (!sub_filepath)
 		return log_oom();
 
 	log_info("downloading to %s ...", sub_filepath);
