@@ -504,7 +504,7 @@ static void show_usage() {
 
 static void show_version() {
 	puts("subberthehut " VERSION "\n"
-	     "https://github.com/65kid/subberthehut/");
+	     "https://github.com/mus65/subberthehut/");
 }
 
 static const char *get_sub_path(const char *filepath, const char *sub_filename) {
