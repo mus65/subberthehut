@@ -2,7 +2,7 @@ VERSION = 9
 
 PREFIX ?= /usr/local
 
-CFLAGS := -std=gnu99 -Wall -Wextra -pedantic -O2 -D_FORTIFY_SOURCE=2 \
+override CFLAGS := -std=gnu99 -Wall -Wextra -pedantic -O2 -D_FORTIFY_SOURCE=2 \
           $(shell xmlrpc-c-config client --cflags) \
           $(shell pkg-config --cflags glib-2.0 zlib) \
           -DVERSION=\"$(VERSION)\" \
