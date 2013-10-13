@@ -426,7 +426,7 @@ static int sub_download(const char *token, int sub_id, const char *file_path) {
 	do {
 		// write decoded data to z_in
 		z_strm.avail_in = g_base64_decode_step(&sub_base64[b64_offset], ZLIB_CHUNK, z_in, &b64_state, &b64_save);
-		b64_offset = z_strm.avail_in * 4 / 3; //  base64 encodes 3 bytes in 4 chars
+		b64_offset += z_strm.avail_in * 4 / 3; //  base64 encodes 3 bytes in 4 chars
 		if (z_strm.avail_in == 0)
 			break;
 
