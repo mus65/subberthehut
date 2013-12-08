@@ -14,7 +14,7 @@ LDLIBS  = $(shell xmlrpc-c-config client --libs) \
 subberthehut: subberthehut.o
 
 install: subberthehut
-	install -D -m 755 subberthehut $(DESTDIR)$(PREFIX)/bin/subberthehut
+	install -pDm755 subberthehut $(DESTDIR)$(PREFIX)/bin/subberthehut
 
 uninstall:
 	$(RM) $(DESTDIR)$(PREFIX)/bin/subberthehut
