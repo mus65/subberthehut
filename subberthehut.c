@@ -165,7 +165,7 @@ static int search_get_results(const char *token, uint64_t hash, uint64_t filesiz
 		query1 = xmlrpc_struct_new(&env);
 		sublanguageid_xmlval = xmlrpc_string_new(&env, lang);
 		xmlrpc_struct_set_value(&env, query1, "sublanguageid", sublanguageid_xmlval);
-		int r = asprintf(&hash_str, "%" PRIx64, hash);
+		int r = asprintf(&hash_str, "%016" PRIx64, hash);
 		if (r == -1)
 			return log_oom();
 		
