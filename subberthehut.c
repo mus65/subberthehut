@@ -462,7 +462,7 @@ finish:
 }
 
 static void show_usage() {
-	puts("Usage: subberthehut [options] <file>\n\n"
+	puts("Usage: subberthehut [options] <file>...\n\n"
 
 	     "OpenSubtitles.org downloader.\n\n"
 
@@ -553,10 +553,7 @@ static const char *get_sub_path(const char *filepath, const char *sub_filename) 
 	return sub_filepath;
 }
 
-int main(int argc, char *argv[]) {
-	const char *filepath = NULL; // no cleanup because it will point to argv
-	_cleanup_free_ const char *token = NULL;
-
+static int process_file(const char *filepath, const char *token) {
 	_cleanup_fclose_ FILE *f = NULL;
 	uint64_t hash = 0, filesize = 0;
 
@@ -564,6 +561,53 @@ int main(int argc, char *argv[]) {
 
 	_cleanup_free_ const char *sub_filename = NULL;
 	_cleanup_free_ const char *sub_filepath = NULL;
+
+	int r = 0;
+
+	// get hash/filesize
+	if (!name_search_only) {
+		f = fopen(filepath, "r");
+		if (!f) {
+			log_err("failed to open %s: %m", filepath);
+			return errno;
+		}
+
+		get_hash_and_filesize(f, &hash, &filesize);
+	}
+
+	const char *filename = strrchr(filepath, '/');
+	if (!filename)
+		filename = filepath;
+
+	log_info("searching for %s...", filename);
+
+	r = search_get_results(token, hash, filesize, lang, filename, &results);
+	if (r != 0)
+		return r;
+
+	// for some reason [data] is of type XMLRPC_TYPE_BOOL if the search returns no hits!?
+	if (xmlrpc_value_type(results) != XMLRPC_TYPE_ARRAY) {
+		log_err("no results.");
+		return 1;
+	}
+	// let user choose the subtitle to download
+	int sub_id = 0;
+	r = choose_from_results(results, &sub_id, &sub_filename);
+	if (r != 0)
+		return r;
+
+	sub_filepath = get_sub_path(filepath, sub_filename);
+	if (!sub_filepath)
+		return log_oom();
+
+	log_info("downloading to %s ...", sub_filepath);
+	r = sub_download(token, sub_id, sub_filepath);
+
+	return r;
+}
+
+int main(int argc, char *argv[]) {
+	_cleanup_free_ const char *token = NULL;
 
 	int r = EXIT_SUCCESS;
 
@@ -632,22 +676,10 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-	// check if user has specified exactly one file
-	if (argc - optind != 1) {
+	// check if user has specified at least one file
+	if (argc - optind < 1) {
 		show_usage();
 		return EXIT_FAILURE;
-	}
-	// get hash/filesize
-	filepath = argv[optind];
-
-	if (!name_search_only) {
-		f = fopen(filepath, "r");
-		if (!f) {
-			perror("failed to open file");
-			return errno;
-		}
-
-		get_hash_and_filesize(f, &hash, &filesize);
 	}
 
 	// xmlrpc init
@@ -667,35 +699,13 @@ int main(int argc, char *argv[]) {
 	if (r != 0)
 		goto finish;
 
-	// start search
-	log_info("searching...");
-
-	const char *filename = strrchr(filepath, '/');
-	if (!filename)
-		filename = filepath;
-
-	r = search_get_results(token, hash, filesize, lang, filename, &results);
-	if (r != 0)
-		goto finish;
-
-	// for some reason [data] is of type XMLRPC_TYPE_BOOL if the search returns no hits!?
-	if (xmlrpc_value_type(results) != XMLRPC_TYPE_ARRAY) {
-		log_err("no results.");
-		r = EXIT_FAILURE;
-		goto finish;
+	// process files
+	for (int i = optind; i < argc; i++) {
+		char *filepath = argv[i];
+		r = process_file(filepath, token);
+		if (r != 0)
+			goto finish;
 	}
-	// let user choose the subtitle to download
-	int sub_id = 0;
-	r = choose_from_results(results, &sub_id, &sub_filename);
-	if (r != 0)
-		goto finish;
-
-	sub_filepath = get_sub_path(filepath, sub_filename);
-	if (!sub_filepath)
-		return log_oom();
-
-	log_info("downloading to %s ...", sub_filepath);
-	r = sub_download(token, sub_id, sub_filepath);
 
 finish:
 	xmlrpc_env_clean(&env);
