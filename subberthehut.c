@@ -145,14 +145,14 @@ static const char *struct_get_string(xmlrpc_value *s, const char *key) {
 
 static int search_get_results(const char *token, uint64_t hash, uint64_t filesize,
                               const char *lang, const char *filename, xmlrpc_value **data) {
-	_cleanup_xmlrpc_ xmlrpc_value *query1 = NULL;	// hash-based query
+	_cleanup_xmlrpc_ xmlrpc_value *hash_query = NULL;
 	_cleanup_xmlrpc_ xmlrpc_value *sublanguageid_xmlval = NULL;
 	_cleanup_xmlrpc_ xmlrpc_value *hash_xmlval = NULL;
 	_cleanup_xmlrpc_ xmlrpc_value *filesize_xmlval = NULL;
 	_cleanup_free_ char *hash_str = NULL;
 	_cleanup_free_ char *filesize_str = NULL;
 
-	_cleanup_xmlrpc_ xmlrpc_value *query2 = NULL;	// full-text query
+	_cleanup_xmlrpc_ xmlrpc_value *name_query = NULL;
 	_cleanup_xmlrpc_ xmlrpc_value *filename_xmlval = NULL;
 
 	_cleanup_xmlrpc_ xmlrpc_value *query_array = NULL;
@@ -162,36 +162,37 @@ static int search_get_results(const char *token, uint64_t hash, uint64_t filesiz
 
 	// create hash-based query
 	if (!name_search_only) {
-		query1 = xmlrpc_struct_new(&env);
+		hash_query = xmlrpc_struct_new(&env);
 		sublanguageid_xmlval = xmlrpc_string_new(&env, lang);
-		xmlrpc_struct_set_value(&env, query1, "sublanguageid", sublanguageid_xmlval);
+		xmlrpc_struct_set_value(&env, hash_query, "sublanguageid", sublanguageid_xmlval);
 		int r = asprintf(&hash_str, "%016" PRIx64, hash);
 		if (r == -1)
 			return log_oom();
 		
 		hash_xmlval = xmlrpc_string_new(&env, hash_str);
-		xmlrpc_struct_set_value(&env, query1, "moviehash", hash_xmlval);
+		xmlrpc_struct_set_value(&env, hash_query, "moviehash", hash_xmlval);
 
 		r = asprintf(&filesize_str, "%" PRIu64, filesize);
 		if (r == -1)
 			return log_oom();
 		
 		filesize_xmlval = xmlrpc_string_new(&env, filesize_str);
-		xmlrpc_struct_set_value(&env, query1, "moviebytesize", filesize_xmlval);
-		xmlrpc_array_append_item(&env, query_array, query1);
+		xmlrpc_struct_set_value(&env, hash_query, "moviebytesize", filesize_xmlval);
+
+		xmlrpc_array_append_item(&env, query_array, hash_query);
 	}
 
 	// create full-text query
 	if (!hash_search_only) {
-		query2 = xmlrpc_struct_new(&env);
+		name_query = xmlrpc_struct_new(&env);
 
 		sublanguageid_xmlval = xmlrpc_string_new(&env, lang);
-		xmlrpc_struct_set_value(&env, query2, "sublanguageid", sublanguageid_xmlval);
+		xmlrpc_struct_set_value(&env, name_query, "sublanguageid", sublanguageid_xmlval);
 
 		filename_xmlval = xmlrpc_string_new(&env, filename);
-		xmlrpc_struct_set_value(&env, query2, "query", filename_xmlval);
+		xmlrpc_struct_set_value(&env, name_query, "query", filename_xmlval);
 
-		xmlrpc_array_append_item(&env, query_array, query2);
+		xmlrpc_array_append_item(&env, query_array, name_query);
 	}
 
 	xmlrpc_client_call2f(&env, client, STH_XMLRPC_URL, "SearchSubtitles", &result, "(sA)", token, query_array);
