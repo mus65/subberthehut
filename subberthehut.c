@@ -143,7 +143,7 @@ static const char *struct_get_string(xmlrpc_value *s, const char *key) {
 	return str;
 }
 
-static int search_get_results(const char *token, uint64_t hash, int filesize,
+static int search_get_results(const char *token, uint64_t hash, uint64_t filesize,
                               const char *lang, const char *filename, xmlrpc_value **data) {
 	_cleanup_xmlrpc_ xmlrpc_value *query1 = NULL;	// hash-based query
 	_cleanup_xmlrpc_ xmlrpc_value *sublanguageid_xmlval = NULL;
@@ -172,7 +172,7 @@ static int search_get_results(const char *token, uint64_t hash, int filesize,
 		hash_xmlval = xmlrpc_string_new(&env, hash_str);
 		xmlrpc_struct_set_value(&env, query1, "moviehash", hash_xmlval);
 
-		r = asprintf(&filesize_str, "%i", filesize);
+		r = asprintf(&filesize_str, "%" PRIu64, filesize);
 		if (r == -1)
 			return log_oom();
 		
