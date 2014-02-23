@@ -63,6 +63,7 @@ static bool never_ask = false;
 static bool hash_search_only = false;
 static bool name_search_only = false;
 static bool same_name = false;
+static int limit = 10;
 static bool exit_on_fail = true;
 static unsigned int quiet = 0;
 
@@ -157,6 +158,10 @@ static int search_get_results(const char *token, uint64_t hash, uint64_t filesiz
 	_cleanup_xmlrpc_ xmlrpc_value *filename_xmlval = NULL;
 
 	_cleanup_xmlrpc_ xmlrpc_value *query_array = NULL;
+
+	_cleanup_xmlrpc_ xmlrpc_value *limit_xmlval = NULL;
+	_cleanup_xmlrpc_ xmlrpc_value *param_struct = NULL;
+
 	_cleanup_xmlrpc_ xmlrpc_value *result = NULL;
 
 	query_array = xmlrpc_array_new(&env);
@@ -196,7 +201,12 @@ static int search_get_results(const char *token, uint64_t hash, uint64_t filesiz
 		xmlrpc_array_append_item(&env, query_array, name_query);
 	}
 
-	xmlrpc_client_call2f(&env, client, STH_XMLRPC_URL, "SearchSubtitles", &result, "(sA)", token, query_array);
+	// create parameter structure (currently only for "limit")
+	param_struct = xmlrpc_struct_new(&env);
+	limit_xmlval = xmlrpc_int_new(&env, limit);
+	xmlrpc_struct_set_value(&env, param_struct, "limit", limit_xmlval);
+
+	xmlrpc_client_call2f(&env, client, STH_XMLRPC_URL, "SearchSubtitles", &result, "(sAS)", token, query_array, param_struct);
 	if (env.fault_occurred) {
 		log_err("query failed: %s (%d)", env.fault_string, env.fault_code);
 		return env.fault_code;
@@ -500,6 +510,7 @@ static void show_usage() {
 	     "                         case of false positives from the hash-based search.\n"
 	     " -s, --same-name         Download the subtitle to the same filename as the\n"
 	     "                         original file, only replacing the file extension.\n"
+	     " -t, --limit <number>    Limits the number of returned results. The default is 10.\n"
 	     " -e, --no-exit-on-fail   By default, subberthehut will exit immediately if\n"
 	     "                         multiple files are passed and it fails to download\n"
 	     "                         a subtitle for one them. When this option is passed,\n"
@@ -628,6 +639,7 @@ int main(int argc, char *argv[]) {
 		{"hash-search-only", no_argument, NULL, 'o'},
 		{"name-search-only", no_argument, NULL, 'O'},
 		{"same-name", no_argument, NULL, 's'},
+		{"limit", required_argument, NULL, 't'},
 		{"no-exit-on-fail", no_argument, NULL, 'e'},
 		{"quiet", no_argument, NULL, 'q'},
 		{"version", no_argument, NULL, 'v'},
@@ -635,7 +647,7 @@ int main(int argc, char *argv[]) {
 	};
 
 	int c;
-	while ((c = getopt_long(argc, argv, "hl:anfoOseqv", opts, NULL)) != -1) {
+	while ((c = getopt_long(argc, argv, "hl:anfoOst:eqv", opts, NULL)) != -1) {
 		switch (c) {
 		case 'h':
 			show_usage();
@@ -670,6 +682,18 @@ int main(int argc, char *argv[]) {
 		case 's':
 			same_name = true;
 			break;
+
+		case 't':
+		{
+			char *endptr = NULL;
+			limit = strtol(optarg, &endptr, 10);
+
+			if (*endptr != '\0' || limit < 1) {
+				log_err("invalid limit: %s", optarg);
+				return EXIT_FAILURE;
+			}
+			break;
+		}
 
 		case 'e':
 			exit_on_fail = false;
