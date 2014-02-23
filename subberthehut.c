@@ -145,7 +145,7 @@ static const char *struct_get_string(xmlrpc_value *s, const char *key) {
 }
 
 static int search_get_results(const char *token, uint64_t hash, uint64_t filesize,
-                              const char *lang, const char *filename, xmlrpc_value **data) {
+                              const char *filename, xmlrpc_value **data) {
 	_cleanup_xmlrpc_ xmlrpc_value *hash_query = NULL;
 	_cleanup_xmlrpc_ xmlrpc_value *sublanguageid_xmlval = NULL;
 	_cleanup_xmlrpc_ xmlrpc_value *hash_xmlval = NULL;
@@ -586,7 +586,7 @@ static int process_file(const char *filepath, const char *token) {
 
 	log_info("searching for %s...", filename);
 
-	r = search_get_results(token, hash, filesize, lang, filename, &results);
+	r = search_get_results(token, hash, filesize, filename, &results);
 	if (r != 0)
 		return r;
 
