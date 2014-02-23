@@ -581,7 +581,9 @@ static int process_file(const char *filepath, const char *token) {
 	}
 
 	const char *filename = strrchr(filepath, '/');
-	if (!filename)
+	if (filename)
+		filename++; // skip '/'
+	else
 		filename = filepath;
 
 	log_info("searching for %s...", filename);
