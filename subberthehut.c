@@ -63,6 +63,7 @@ static bool never_ask = false;
 static bool hash_search_only = false;
 static bool name_search_only = false;
 static bool same_name = false;
+static bool exit_on_fail = true;
 static unsigned int quiet = 0;
 
 struct sub_info {
@@ -499,6 +500,10 @@ static void show_usage() {
 	     "                         case of false positives from the hash-based search.\n"
 	     " -s, --same-name         Download the subtitle to the same filename as the\n"
 	     "                         original file, only replacing the file extension.\n"
+	     " -e, --no-exit-on-fail   By default, subberthehut will exit immediately if\n"
+	     "                         multiple files are passed and it fails to download\n"
+	     "                         a subtitle for one them. When this option is passed,\n"
+	     "                         subberthehut will process the next file(s) regardless.\n"
 	     " -q, --quiet             Don't print the table if the user doesn't have to be\n"
 	     "                         asked which subtitle to download. Pass this option twice\n"
 	     "                         to suppress anything but warnings and error messages.\n");
@@ -621,13 +626,14 @@ int main(int argc, char *argv[]) {
 		{"hash-search-only", no_argument, NULL, 'o'},
 		{"name-search-only", no_argument, NULL, 'O'},
 		{"same-name", no_argument, NULL, 's'},
+		{"no-exit-on-fail", no_argument, NULL, 'e'},
 		{"quiet", no_argument, NULL, 'q'},
 		{"version", no_argument, NULL, 'v'},
 		{0, 0, 0, 0}
 	};
 
 	int c;
-	while ((c = getopt_long(argc, argv, "hl:anfoOsqv", opts, NULL)) != -1) {
+	while ((c = getopt_long(argc, argv, "hl:anfoOseqv", opts, NULL)) != -1) {
 		switch (c) {
 		case 'h':
 			show_usage();
@@ -661,6 +667,10 @@ int main(int argc, char *argv[]) {
 
 		case 's':
 			same_name = true;
+			break;
+
+		case 'e':
+			exit_on_fail = false;
 			break;
 
 		case 'q':
@@ -703,7 +713,7 @@ int main(int argc, char *argv[]) {
 	for (int i = optind; i < argc; i++) {
 		char *filepath = argv[i];
 		r = process_file(filepath, token);
-		if (r != 0)
+		if (r != 0 && exit_on_fail)
 			goto finish;
 	}
 
