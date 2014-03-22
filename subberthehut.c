@@ -57,6 +57,7 @@ static xmlrpc_client *client;
 
 // options default values
 static const char *lang = "eng";
+static bool list_languages = false;
 static bool force_overwrite = false;
 static bool always_ask = false;
 static bool never_ask = false;
@@ -499,7 +500,10 @@ static void show_usage() {
 	     "\n"
 	     " -l, --lang <languages>  Comma-separated list of languages to search for,\n"
 	     "                         e.g. 'eng,ger'. Use 'all' to search for all\n"
-	     "                         languages. Default is 'eng'.\n"
+	     "                         languages. Default is 'eng'. Use --list-languages\n"
+	     "                         to list all available languages.\n"
+	     "\n"
+	     " -L, --list-languages    List all available languages and exit.\n"
 	     "\n"
 	     " -a, --always-ask        Always ask which subtitle to download, even\n"
 	     "                         when there are hash-based results.\n"
@@ -635,6 +639,41 @@ static int process_file(const char *filepath, const char *token) {
 	return r;
 }
 
+static int list_sub_languages() {
+	_cleanup_xmlrpc_ xmlrpc_value *result = NULL;
+	_cleanup_xmlrpc_ xmlrpc_value *languages = NULL;
+
+	xmlrpc_client_call2f(&env, client, STH_XMLRPC_URL, "GetSubLanguages", &result, "()");
+	if (env.fault_occurred) {
+		log_err("failed to download languages: %s (%d)", env.fault_string, env.fault_code);
+		return env.fault_code;
+	}
+
+	xmlrpc_struct_read_value(&env, result, "data", &languages);
+	if (env.fault_occurred) {
+		log_err("failed to get data: %s (%d)", env.fault_string, env.fault_code);
+		return env.fault_code;
+	}
+
+	int n = xmlrpc_array_size(&env, languages);
+	if (env.fault_occurred) {
+		log_err("failed to get array size: %s (%d)", env.fault_string, env.fault_code);
+		return env.fault_code;
+	}
+
+	for (int i = 0; i < n; i++) {
+		_cleanup_xmlrpc_ xmlrpc_value *language = NULL;
+		xmlrpc_array_read_item(&env, languages, i, &language);
+
+		_cleanup_free_ const char *lang_id = struct_get_string(language, "SubLanguageID");
+		_cleanup_free_ const char *lang_name = struct_get_string(language, "LanguageName");
+
+		printf("%s - %s\n", lang_id, lang_name);
+	}
+
+	return 0;
+}
+
 int main(int argc, char *argv[]) {
 	_cleanup_free_ const char *token = NULL;
 
@@ -644,6 +683,7 @@ int main(int argc, char *argv[]) {
 	const struct option opts[] = {
 		{"help", no_argument, NULL, 'h'},
 		{"lang", required_argument, NULL, 'l'},
+		{"list-languages", no_argument, NULL, 'L'},
 		{"always-ask", no_argument, NULL, 'a'},
 		{"never-ask", no_argument, NULL, 'n'},
 		{"force", no_argument, NULL, 'f'},
@@ -658,7 +698,7 @@ int main(int argc, char *argv[]) {
 	};
 
 	int c;
-	while ((c = getopt_long(argc, argv, "hl:anfoOst:eqv", opts, NULL)) != -1) {
+	while ((c = getopt_long(argc, argv, "hl:LanfoOst:eqv", opts, NULL)) != -1) {
 		switch (c) {
 		case 'h':
 			show_usage();
@@ -666,6 +706,10 @@ int main(int argc, char *argv[]) {
 
 		case 'l':
 			lang = optarg;
+			break;
+
+		case 'L':
+			list_languages = true;
 			break;
 
 		case 'a':
@@ -723,8 +767,8 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-	// check if user has specified at least one file
-	if (argc - optind < 1) {
+	// check if user has specified at least one file (except for listing languages)
+	if (argc - optind < 1 && !list_languages) {
 		show_usage();
 		return EXIT_FAILURE;
 	}
@@ -745,6 +789,12 @@ int main(int argc, char *argv[]) {
 	r = login(&token);
 	if (r != 0)
 		goto finish;
+
+	// only list the languages and exit
+	if (list_languages) {
+		r = list_sub_languages();
+		goto finish;
+	}
 
 	// process files
 	for (int i = optind; i < argc; i++) {

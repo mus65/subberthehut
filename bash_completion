@@ -4,8 +4,9 @@ _subberthehut()
 {
 	local cur="${COMP_WORDS[COMP_CWORD]}"
 
-	local opts="-h -v -l -a -n -f -o -O -s -t -e -q
-	            --help --version --lang --always-ask --never-ask
+	local opts="-h -v -l -L -a -n -f -o -O -s -t -e -q
+	            --help --version --lang --list-languages
+	            --always-ask --never-ask
 	            --force --hash-search-only --name-search-only
 	            --same-name --limit --no-exit-on-fail --quiet"
 
