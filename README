@@ -8,6 +8,7 @@ Dependencies:
  - xmlrpc-c
  - glib2
  - zlib
+ - bash-completion (make only)
 
 AUR package: https://aur.archlinux.org/packages/subberthehut/
 
