@@ -32,4 +32,4 @@ ifeq ($(bash_completion_dir),)
 endif
 
 
-.PHONY: install uninstall clean
+.PHONY: install uninstall clean check-bash-completion
