@@ -11,7 +11,8 @@ override CFLAGS := -std=gnu99 -Wall -Wextra -pedantic -O2 -D_FORTIFY_SOURCE=2 \
                    $(CFLAGS)
 
 LDLIBS  = $(shell xmlrpc-c-config client --libs) \
-          $(shell pkg-config --libs glib-2.0 zlib)
+          $(shell pkg-config --libs glib-2.0 zlib) \
+          $(LDFLAGS)
 
 subberthehut: subberthehut.o
 
