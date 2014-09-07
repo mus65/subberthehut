@@ -328,7 +328,7 @@ static int insert_moviehash(const char* token, const char* filepath, const char*
         movietimems_xmlval = xmlrpc_string_new(&env, movietimems_str);
         
         // find the first video stream
-        int i = 0;
+        size_t i = 0;
         for(; i < fmt_ctx->nb_streams && fmt_ctx->streams[i]->codec->codec_type != AVMEDIA_TYPE_VIDEO; ++i);
         
         // get fps
