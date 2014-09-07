@@ -158,6 +158,9 @@ static int login(const char **token) {
 //////////////////////////////////////////////////////////////////////////////////////////////////
 /// convenience function the get a string value from a xmlrpc struct.
 static const char *struct_get_char(xmlrpc_value *s, const char *key) {
+    g_assert_nonnull(s);
+    g_assert_nonnull(key);
+    
 	scoped_ptr(xmlrpc_value) xmlval = NULL;
 	const char* str;
     
@@ -168,8 +171,11 @@ static const char *struct_get_char(xmlrpc_value *s, const char *key) {
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
-static int search_get_results(const char *token, const char* hash_str, const char* filesize_str,
-                              const char *filename, xmlrpc_value **data) {
+static int search_get_results(const char *token, const char* hash_str, const char* filesize_str, const char *filename, xmlrpc_value **data) {
+    g_assert_nonnull(token);
+    g_assert_nonnull(hash_str);
+    g_assert_nonnull(filesize_str);
+    g_assert_nonnull(filename);
     
 	scoped_ptr(xmlrpc_value) hash_query = NULL;
 	scoped_ptr(xmlrpc_value) sublanguageid_xmlval = NULL;
@@ -233,43 +239,58 @@ static int search_get_results(const char *token, const char* hash_str, const cha
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
-static const char* find_imdb_from_nfo(const char *filename) {
+static const char* find_imdb_from_nfo(const char *filepath) {
+    g_assert_nonnull(filepath);
+    
+    bool parent_searched = false;
     
     scoped_ptr(GError) error = NULL;
     scoped_ptr(GMatchInfo) regex_match_info;
     scoped_ptr(GRegex) imdb_regex = g_regex_new("imdb\\.[^\\/]+\\/title\\/tt(\\d+)", G_REGEX_CASELESS, 0, NULL);
     scoped_ptr(GRegex) nfo_regex = g_regex_new(".*\\.nfo$|.*\\.txt$", G_REGEX_CASELESS, 0, NULL);
+    scoped_ptr(GRegex) cd_regex = g_regex_new("disk\\d+$|cd\\d+$", G_REGEX_CASELESS, 0, NULL);
     
-    const char* last_slash = strrchr(filename, '/');
-    
-    // Get directory name
-    int dir_path_size = (int)(last_slash - filename) + 1;
-    scoped_ptr(gchar) dir_path = malloc(dir_path_size + 1);
-    strncpy(dir_path, filename, dir_path_size);
-    dir_path[dir_path_size] = '\0';
-    
-    // Search for nfo file
+    // get directory
+    scoped_ptr(char) dir_path = g_utf8_substring(filepath, 0, strrchr(filepath, '/') - filepath);
     scoped_ptr(GDir) dir = g_dir_open(dir_path, 0, &error);
-    while ((filename = g_dir_read_name(dir))) {
+    
+    // search for nfo file
+    while (true) {
+        
+        const char* filename = g_dir_read_name(dir);
+        if (filename == NULL) {
+            if (parent_searched == false && g_regex_match(cd_regex, dir_path, 0, NULL)) {
+                parent_searched = true;
+                
+                // get parent directory
+                dir_path[strrchr(dir_path, '/') - dir_path] = '\0';
+                g_dir_close(dir);
+                dir = g_dir_open(dir_path, 0, &error);
+                filename = g_dir_read_name(dir);
+            }
+            else
+                break;
+        }
         
         if (g_regex_match(nfo_regex, filename, 0, NULL)) {
-            scoped_ptr(gchar) nfo_str = NULL;
-            scoped_ptr(gchar) nfo_path = malloc(dir_path_size + strlen(filename) + 1);
+            scoped_ptr(gchar) nfo_contents = NULL;
+            scoped_ptr(char) nfo_path = NULL;
             
-            strcpy(nfo_path, dir_path);
-            strcpy(nfo_path + dir_path_size, filename);
-            nfo_path[dir_path_size + strlen(filename)] = '\0';
-            
-            // Try to find imdb number with regexp in nfo file
-            g_file_get_contents(nfo_path, &nfo_str, NULL, &error);
+            if (asprintf(&nfo_path, "%s/%s", dir_path, filename) == -1) {
+                log_oom();
+                return NULL;
+            }
+
+            // try to find imdb number with regexp in nfo file
+            g_file_get_contents(nfo_path, &nfo_contents, NULL, &error);
             if (error != NULL) {
                 log_err("Cannot read nfo file %s to find imdb id!\n"
-                        "Error: %s", filename, error->message);
+                        "Error: %s", filepath, error->message);
                 continue;
             }
             
-            if (g_regex_match(imdb_regex, nfo_str, 0, &regex_match_info)) {
-                // Imdb id found
+            if (g_regex_match(imdb_regex, nfo_contents, 0, &regex_match_info)) {
+                // imdb id found (first subcapture)
                 return g_match_info_fetch(regex_match_info, 1);
             }
         }
@@ -279,13 +300,11 @@ static const char* find_imdb_from_nfo(const char *filename) {
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
-static int insert_moviehash(const char* token, const char* filepath, const char* hash_str, const char* filesize_str,
-                             const char* imdb_str) {
-    
-    g_assert(token != NULL);
-    g_assert(hash_str != NULL);
-    g_assert(filesize_str != NULL);
-    g_assert(imdb_str != NULL);
+static int insert_moviehash(const char* token, const char* filepath, const char* hash_str, const char* filesize_str, const char* imdb_str) {
+    g_assert_nonnull(token);
+    g_assert_nonnull(hash_str);
+    g_assert_nonnull(filesize_str);
+    g_assert_nonnull(imdb_str);
     
     int err = 0;
 
@@ -381,6 +400,8 @@ static void print_separator(int c, int digit_count) {
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
 static void print_table(struct sub_info *sub_infos, int n, int align_release_name) {
+    g_assert_nonnull(sub_infos);
+    
 	// count number of digits
 	int digit_count = 0;
 	int n_tmp = n;
@@ -427,6 +448,10 @@ static void print_table(struct sub_info *sub_infos, int n, int align_release_nam
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
 static int choose_from_results(xmlrpc_value *results, int *sub_id, const char **sub_filename) {
+    g_assert_nonnull(results);
+    g_assert_nonnull(sub_id);
+    g_assert_nonnull(sub_filename);
+    
 	int err = 0;
     
 	int n = xmlrpc_array_size(&env, results);
@@ -511,6 +536,10 @@ finish:
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
 static int sub_download(const char *token, int sub_id, const char *file_path) {
+    g_assert_nonnull(token);
+    g_assert_nonnull(file_path);
+    g_assert_true(sub_id > 0);
+    
     int err = 0;
     
 	scoped_ptr(xmlrpc_value) sub_id_xmlval = NULL;
@@ -693,6 +722,9 @@ static void show_subberthehut_version() {
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
 static const char *get_sub_path(const char *filepath, const char *sub_filename) {
+    g_assert_nonnull(filepath);
+    g_assert_nonnull(sub_filename);
+    
 	char *sub_filepath;
     
 	if (same_name) {
@@ -737,7 +769,10 @@ static const char *get_sub_path(const char *filepath, const char *sub_filename) 
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
-static int process_file(const char *filepath, const char *token) {
+static int process_file(const char *token, const char *filepath) {
+    g_assert_nonnull(filepath);
+    g_assert_nonnull(token);
+    
 	scoped_ptr(FILE) f = NULL;
     
 	scoped_ptr(xmlrpc_value) results = NULL;
@@ -805,7 +840,7 @@ static int process_file(const char *filepath, const char *token) {
 		return log_oom();
     
     // download subtitle
-	log_info("downloading to %s ...", sub_filepath);
+	log_info("Downloading to %s ...", sub_filepath);
 	err = sub_download(token, sub_id, sub_filepath);
     
 	return err;
@@ -991,7 +1026,7 @@ int main(int argc, char *argv[]) {
         
         // check extension of file
         if (g_regex_match(video_regexp, filepath, 0, NULL)) {
-            ret = process_file(filepath, token);
+            ret = process_file(token, filepath);
         }
         else {
             log_err("%s is not a video file (invalid extension)", filepath);
