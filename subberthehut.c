@@ -41,7 +41,6 @@
     static void cleanup_ ## type (type **ptr) __attribute__((unused)); \
     static void cleanup_ ## type (type **ptr) { \
         if(*ptr) { \
-            printf("cleaning %s %p\n", #type, *ptr);\
             function(*ptr); \
         } \
     } \
@@ -49,7 +48,6 @@
     static void cleanup_const_ ## type (const type **ptr) __attribute__((unused)); \
     static void cleanup_const_ ## type (const type **ptr) { \
         if(*ptr) { \
-            printf("cleaning %s %p\n", #type, *ptr);\
             function(*(type**)ptr); \
         } \
     } \
@@ -1028,7 +1026,17 @@ int main(int argc, char *argv[]) {
     
 	// process files
 	for (int i = optind; i < argc; i++) {
-		char *filepath = argv[i];
+		char filepath[2048];
+        
+        if (argv[i][0] == '/')
+            strcpy(filepath, argv[i]);
+        else {
+            // get full filepath
+            getcwd(filepath, sizeof(filepath));
+            size_t filepath_lenght = strlen(filepath);
+            filepath[filepath_lenght++] = '/';
+            strncpy(filepath + filepath_lenght, argv[i], strlen(argv[i]) + 1);
+        }
         
         // check extension of file
         if (g_regex_match(video_regexp, filepath, 0, NULL)) {
