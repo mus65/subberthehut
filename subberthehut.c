@@ -40,12 +40,18 @@
 #define DECLARE_CLEANUP_FNC(type, function) \
     static void cleanup_ ## type (type **ptr) __attribute__((unused)); \
     static void cleanup_ ## type (type **ptr) { \
-        if(*ptr) { function(*ptr); } \
+        if(*ptr) { \
+            printf("cleaning %s %p\n", #type, *ptr);\
+            function(*ptr); \
+        } \
     } \
     \
     static void cleanup_const_ ## type (const type **ptr) __attribute__((unused)); \
     static void cleanup_const_ ## type (const type **ptr) { \
-        if(*ptr) { function(*(type**)ptr); } \
+        if(*ptr) { \
+            printf("cleaning %s %p\n", #type, *ptr);\
+            function(*(type**)ptr); \
+        } \
     } \
 
 #define scoped_ptr(type) __attribute__((cleanup(cleanup_ ## type))) type *
@@ -245,15 +251,15 @@ static const char* find_imdb_from_nfo(const char *filepath) {
     bool parent_searched = false;
     
     scoped_ptr(GError) error = NULL;
-    scoped_ptr(GMatchInfo) regex_match_info;
+    scoped_ptr(GMatchInfo) regex_match_info = NULL;
     scoped_ptr(GRegex) imdb_regex = g_regex_new("imdb\\.[^\\/]+\\/title\\/tt(\\d+)", G_REGEX_CASELESS, 0, NULL);
     scoped_ptr(GRegex) nfo_regex = g_regex_new(".*\\.nfo$|.*\\.txt$", G_REGEX_CASELESS, 0, NULL);
     scoped_ptr(GRegex) cd_regex = g_regex_new("disk\\d+$|cd\\d+$", G_REGEX_CASELESS, 0, NULL);
     
     // get directory
-    scoped_ptr(char) dir_path = g_utf8_substring(filepath, 0, strrchr(filepath, '/') - filepath);
+    scoped_ptr(gchar) dir_path = g_utf8_substring(filepath, 0, strrchr(filepath, '/') - filepath);
     scoped_ptr(GDir) dir = g_dir_open(dir_path, 0, &error);
-    
+
     // search for nfo file
     while (true) {
         
@@ -274,7 +280,7 @@ static const char* find_imdb_from_nfo(const char *filepath) {
         
         if (g_regex_match(nfo_regex, filename, 0, NULL)) {
             scoped_ptr(gchar) nfo_contents = NULL;
-            scoped_ptr(char) nfo_path = NULL;
+            scoped_ptr(gchar) nfo_path = NULL;
             
             if (asprintf(&nfo_path, "%s/%s", dir_path, filename) == -1) {
                 log_oom();
@@ -767,6 +773,8 @@ static const char *get_sub_path(const char *filepath, const char *sub_filename) 
 	}
 	return sub_filepath;
 }
+
+static int gog() { return 0; }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
 static int process_file(const char *token, const char *filepath) {
