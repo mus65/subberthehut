@@ -774,8 +774,6 @@ static const char *get_sub_path(const char *filepath, const char *sub_filename) 
 	return sub_filepath;
 }
 
-static int gog() { return 0; }
-
 //////////////////////////////////////////////////////////////////////////////////////////////////
 static int process_file(const char *token, const char *filepath) {
     g_assert_nonnull(filepath);
