@@ -16,7 +16,7 @@
 
 #define STH_XMLRPC_URL         "http://api.opensubtitles.org/xml-rpc"
 #define LOGIN_LANGCODE         "en"
-#define LOGIN_USER_AGENT       "subberthehut"
+#define LOGIN_USER_AGENT       "subberthehut v" VERSION
 
 #define ZLIB_CHUNK             (64 * 1024)
 
