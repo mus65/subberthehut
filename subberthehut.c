@@ -463,7 +463,13 @@ static int sub_download(const char *token, int sub_id, const char *file_path) {
 			}
 			// write decompressed data from z_out to file
 			unsigned int have = ZLIB_CHUNK - z_strm.avail_out;
-			fwrite(z_out, 1, have, f);
+
+			size_t written = fwrite(z_out, 1, have, f);
+			if (written != have) {
+				log_err("failed to write file: %m");
+				r = errno;
+				goto finish;
+			}
 		} while (z_strm.avail_out == 0);
 	} while (z_ret != Z_STREAM_END);
 
