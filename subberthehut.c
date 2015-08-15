@@ -31,7 +31,7 @@
 #include <glib.h> // g_base64_decode_step
 #include <zlib.h>
 
-#define STH_XMLRPC_URL         "http://api.opensubtitles.org/xml-rpc"
+#define STH_XMLRPC_URL         "https://api.opensubtitles.org/xml-rpc"
 #define LOGIN_LANGCODE         "en"
 #define LOGIN_USER_AGENT       "subberthehut v" VERSION
 
