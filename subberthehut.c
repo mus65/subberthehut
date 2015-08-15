@@ -192,14 +192,14 @@ static int search_get_results(const char *token, uint64_t hash, uint64_t filesiz
 		int r = asprintf(&hash_str, "%016" PRIx64, hash);
 		if (r == -1)
 			return log_oom();
-		
+
 		hash_xmlval = xmlrpc_string_new(&env, hash_str);
 		xmlrpc_struct_set_value(&env, hash_query, "moviehash", hash_xmlval);
 
 		r = asprintf(&filesize_str, "%" PRIu64, filesize);
 		if (r == -1)
 			return log_oom();
-		
+
 		filesize_xmlval = xmlrpc_string_new(&env, filesize_str);
 		xmlrpc_struct_set_value(&env, hash_query, "moviebytesize", filesize_xmlval);
 
@@ -242,7 +242,7 @@ static int search_get_results(const char *token, uint64_t hash, uint64_t filesiz
 static void print_separator(int c, int digit_count) {
 	for (int i = 0; i < c; i++) {
 		if (i == digit_count + 1 ||
-		    i == digit_count + 1 + 4 || 
+		    i == digit_count + 1 + 4 ||
 		    i == digit_count + 1 + 4 + 6) {
 			fputs(SEP_CROSS, stdout);
 		}
@@ -357,7 +357,7 @@ static int choose_from_results(xmlrpc_value *results, int *sub_id, const char **
 				r = EIO;
 				goto finish;
 			}
-			
+
 			sel = strtol(line, &endptr, 10);
 		} while (*endptr != '\n' || sel < 1 || sel > n);
 	}
@@ -808,6 +808,7 @@ int main(int argc, char *argv[]) {
 		r = env.fault_code;
 		goto finish;
 	}
+
 	// login
 	r = login(&token);
 	if (r != 0)
