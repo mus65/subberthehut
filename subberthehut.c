@@ -298,15 +298,8 @@ static void print_table(struct sub_info *sub_infos, int n, int align_release_nam
 	putchar('\n');
 }
 
-static int choose_from_results(xmlrpc_value *results, int *sub_id, const char **sub_filename) {
+static int choose_from_results(xmlrpc_value *results, int n, int *sub_id, const char **sub_filename) {
 	int r = 0;
-
-	int n = xmlrpc_array_size(&env, results);
-	if (env.fault_occurred) {
-		log_err("failed to get array size: %s (%d)", env.fault_string, env.fault_code);
-		return env.fault_code;
-	}
-
 	struct sub_info sub_infos[n];
 
 	int sel = 0; // selected list item
@@ -641,14 +634,20 @@ static int process_file(const char *filepath, const char *token) {
 	if (r != 0)
 		return r;
 
-	// for some reason [data] is of type XMLRPC_TYPE_BOOL if the search returns no hits!?
-	if (xmlrpc_value_type(results) != XMLRPC_TYPE_ARRAY) {
+	int results_length = xmlrpc_array_size(&env, results);
+	if (env.fault_occurred) {
+		log_err("failed to get array size: %s (%d)", env.fault_string, env.fault_code);
+		return env.fault_code;
+	}
+
+	if (results_length == 0) {
 		log_err("no results.");
 		return 1;
 	}
+
 	// let user choose the subtitle to download
 	int sub_id = 0;
-	r = choose_from_results(results, &sub_id, &sub_filename);
+	r = choose_from_results(results, results_length, &sub_id, &sub_filename);
 	if (r != 0)
 		return r;
 
