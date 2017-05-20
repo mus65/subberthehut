@@ -134,22 +134,6 @@ static void get_hash_and_filesize(FILE *handle, uint64_t *hash, uint64_t *filesi
 	for (uint64_t tmp = 0, i = 0; i < 65536 / sizeof(tmp) && fread((char *) &tmp, sizeof(tmp), 1, handle); *hash += tmp, i++);
 }
 
-static int login(const char **token) {
-	_cleanup_xmlrpc_ xmlrpc_value *result = NULL;
-	_cleanup_xmlrpc_ xmlrpc_value *token_xmlval = NULL;
-
-	xmlrpc_client_call2f(&env, client, STH_XMLRPC_URL, "LogIn", &result, "(ssss)", "", "", LOGIN_LANGCODE, LOGIN_USER_AGENT);
-	if (env.fault_occurred) {
-		log_err("login failed: %s (%d)", env.fault_string, env.fault_code);
-		return env.fault_code;
-	}
-
-	xmlrpc_struct_find_value(&env, result, "token", &token_xmlval);
-	xmlrpc_read_string(&env, token_xmlval, token);
-
-	return 0;
-}
-
 /*
  * convenience function the get a string value from a xmlrpc struct.
  */
@@ -161,6 +145,29 @@ static const char *struct_get_string(xmlrpc_value *s, const char *key) {
 	xmlrpc_read_string(&env, xmlval, &str);
 
 	return str;
+}
+
+static int login(const char **token) {
+	_cleanup_xmlrpc_ xmlrpc_value *result = NULL;
+	_cleanup_xmlrpc_ xmlrpc_value *token_xmlval = NULL;
+	_cleanup_free_ const char *status = NULL;
+
+	xmlrpc_client_call2f(&env, client, STH_XMLRPC_URL, "LogIn", &result, "(ssss)", "", "", LOGIN_LANGCODE, LOGIN_USER_AGENT);
+	if (env.fault_occurred) {
+		log_err("login failed: %s (%d)", env.fault_string, env.fault_code);
+		return env.fault_code;
+	}
+
+	status = struct_get_string(result, "status");
+	if (strcmp(status, "200 OK")) {
+		log_err("login failed: %s", status);
+		return 1;
+	}
+
+	xmlrpc_struct_find_value(&env, result, "token", &token_xmlval);
+	xmlrpc_read_string(&env, token_xmlval, token);
+
+	return 0;
 }
 
 static int search_get_results(const char *token, uint64_t hash, uint64_t filesize,
