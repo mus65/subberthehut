@@ -1,4 +1,4 @@
-VERSION = 19
+VERSION = 20
 
 PREFIX ?= /usr/local
 
