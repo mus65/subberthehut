@@ -465,6 +465,7 @@ static int sub_download(const char *token, int sub_id, const char *file_path) {
 			switch (z_ret) {
 			case Z_NEED_DICT:
 				z_ret = Z_DATA_ERROR;
+				// fallthrough
 			case Z_DATA_ERROR:
 			case Z_MEM_ERROR:
 				r = z_ret;
