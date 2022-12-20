@@ -1,3 +1,7 @@
+# Obsolete
+
+The XML-RPC API used by subberthehut will be turned off at the end of 2023, see [this announcement](https://forum.opensubtitles.org/viewtopic.php?f=11&t=17930). I do not plan to migrate to the new API, therefore subberthehut should be considered obsolete and this repository will be archived.
+
 # subberthehut
 subberthehut is a command-line based OpenSubtitles.org downloader, written in C.
 
